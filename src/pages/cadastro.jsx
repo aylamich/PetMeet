@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logo from '/logo.png'; // Importação da imagem
+import logo from '/logo.png'; // Importação da logo
 
 function Cadastro() {
   const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.

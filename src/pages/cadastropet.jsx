@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import logo from '/logo.png'; // Importe a imagem
-
+import logo from '/logo.png'; // Importação da logo
 function CadastroPet() {
-  const [idade, setIdade] = useState('');
-  const [unidadeIdade, setUnidadeIdade] = useState('anos');
-  const [mostrarModalSucesso, setMostrarModalSucesso] = useState(false);
+  const [idade, setIdade] = useState(''); // Idade do pet, inicia vazia
+  const [unidadeIdade, setUnidadeIdade] = useState('anos'); // Valor padrão: Anos
+  const [mostrarModalSucesso, setMostrarModalSucesso] = useState(false); // Modal de Sucesso: Oculto, só mostra quando bem sucedido
 
   // Atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
   const handleIdadeChange = (event) => {
-    const valor = event.target.value.replace(/\D/g, ''); // Remove tudo que não é número
-    if (valor.length <= 2) {
-      setIdade(valor);
+    const valor = event.target.value.replace(/\D/g, ''); // ReGex que remove tudo que não é número
+    if (valor.length <= 2) { // No máximo 2 números
+      setIdade(valor); // Atualiza o estado com o valor filtrado 
     }
   };
 
   const handleUnidadeIdadeChange = (event) => {
-    setUnidadeIdade(event.target.value);
+    setUnidadeIdade(event.target.value); //Para atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
   };
 
   // Validar formulário ao enviar
@@ -23,7 +22,7 @@ function CadastroPet() {
     event.preventDefault();
 
     // Validar idade (deve ter exatamente 1 ou 2 números)
-    if (!/^\d{1,2}$/.test(idade)) {
+    if (!/^\d{1,2}$/.test(idade)) { // RegEx que valida se tem 1 ou 2 números, se não tiver, retorna o alerta
       alert('A idade deve conter no máximo 2 números.'); // Alerta se a idade não for válida
       return;
     }
@@ -36,11 +35,11 @@ function CadastroPet() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex"> {/*  Altura minima como 100% da tela */}
       {/* Lado esquerdo: Imagem */}
       <div
         className="w-3/5 bg-cover bg-center"
-        style={{ backgroundImage: `url(${logo})` }} // Use a imagem importada
+        style={{ backgroundImage: `url(${logo})` }} // Logo PetMeet
       ></div>
 
       {/* Lado direito: Formulário de Cadastro Pet */}
@@ -55,14 +54,8 @@ function CadastroPet() {
               <label htmlFor="fotoPet" className="block text-sm font-medium text-gray-700">
                 Foto do Pet
               </label>
-              <input
-                type="file"
-                id="fotoPet"
-                name="fotoPet"
-                accept="image/*"
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
-                required
-              />
+              <input type="file" id="fotoPet" name="fotoPet" accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
+                required/>
             </div>
 
             {/* Campo de Gênero do Pet */}
@@ -70,12 +63,8 @@ function CadastroPet() {
               <label htmlFor="generoPet" className="block text-sm font-medium text-gray-700">
                 Gênero
               </label>
-              <select
-                id="generoPet"
-                name="generoPet"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                required
-              >
+              <select id="generoPet" name="generoPet" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required>
                 <option value="" disabled selected>
                   Selecione o gênero
                 </option>
@@ -92,29 +81,20 @@ function CadastroPet() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Campo de Idade (input) */}
                 <div>
-                  <input
-                    type="text"
-                    id="idade"
-                    name="idade"
-                    placeholder="Digite a idade"
-                    value={idade}
+                  <input type="text" id="idade" name="idade" placeholder="Digite a idade" value={idade}
                     onChange={handleIdadeChange}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                    required
-                  />
+                    required/>
                 </div>
                 {/* Campo de Seleção (Ano/Anos ou Mês/Meses) */}
                 <div>
-                  <select
-                    id="unidadeIdade"
-                    name="unidadeIdade"
-                    value={unidadeIdade}
+                  <select id="unidadeIdade" name="unidadeIdade" value={unidadeIdade}
                     onChange={handleUnidadeIdadeChange}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                    required
-                  >
-                    <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option>
-                    <option value="meses">{idade === '1' ? 'Mês' : 'Meses'}</option>
+                    required>
+
+                    <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option> {/* Se a idade for 1, exibe Ano, senão, Anos */}
+                    <option value="meses">{idade === '1' ? 'Mês' : 'Meses'}</option> {/* Se a idade for 1, exibe Mês, senão, Meses */}
                   </select>
                 </div>
               </div>
@@ -125,12 +105,9 @@ function CadastroPet() {
               <label htmlFor="portePet" className="block text-sm font-medium text-gray-700">
                 Porte
               </label>
-              <select
-                id="portePet"
-                name="portePet"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                required
-              >
+              <select id="portePet" name="portePet" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required>
+
                 <option value="" disabled selected>
                   Selecione o porte
                 </option>
@@ -145,14 +122,8 @@ function CadastroPet() {
               <label htmlFor="racaPet" className="block text-sm font-medium text-gray-700">
                 Raça
               </label>
-              <input
-                type="text"
-                id="racaPet"
-                name="racaPet"
-                placeholder="Digite a raça"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                required
-              />
+              <input type="text" id="racaPet" name="racaPet" placeholder="Digite a raça" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required/>
             </div>
 
             {/* Botão de Salvar */}
