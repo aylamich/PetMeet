@@ -67,7 +67,7 @@ function Cadastro() {
                 id="nomeCompleto"
                 name="nomeCompleto"
                 placeholder="Digite seu nome completo"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 onChange={handleNomeCompletoChange}
                 required
               />
@@ -83,7 +83,7 @@ function Cadastro() {
                 id="email"
                 name="email"
                 placeholder="Digite seu email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
             </div>
@@ -96,7 +96,7 @@ function Cadastro() {
               <select
                 id="genero"
                 name="genero"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               >
                 <option value="" disabled selected>
@@ -116,7 +116,7 @@ function Cadastro() {
                 type="date"
                 id="dataNascimento"
                 name="dataNascimento"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
             </div>
@@ -129,7 +129,7 @@ function Cadastro() {
               <select
                 id="cidade"
                 name="cidade"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               >
                 <option value="" disabled selected>
@@ -147,7 +147,7 @@ function Cadastro() {
               <select
                 id="estado"
                 name="estado"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               >
                 <option value="" disabled selected>
@@ -167,7 +167,7 @@ function Cadastro() {
                 id="senha"
                 name="senha"
                 placeholder="Digite sua senha"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 onFocus={handleSenhaFocus}
                 onBlur={handleSenhaBlur}
                 required
@@ -192,7 +192,7 @@ function Cadastro() {
             {/* Botão de Próximo */}
             <button
               type="submit"
-              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-red-400 text-white py-2 px-4 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300"
             >
               Próximo
             </button>

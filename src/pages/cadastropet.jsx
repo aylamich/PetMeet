@@ -60,7 +60,7 @@ function CadastroPet() {
                 id="fotoPet"
                 name="fotoPet"
                 accept="image/*"
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
                 required
               />
             </div>
@@ -73,7 +73,7 @@ function CadastroPet() {
               <select
                 id="generoPet"
                 name="generoPet"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               >
                 <option value="" disabled selected>
@@ -99,7 +99,7 @@ function CadastroPet() {
                     placeholder="Digite a idade"
                     value={idade}
                     onChange={handleIdadeChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                     required
                   />
                 </div>
@@ -110,7 +110,7 @@ function CadastroPet() {
                     name="unidadeIdade"
                     value={unidadeIdade}
                     onChange={handleUnidadeIdadeChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                     required
                   >
                     <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option>
@@ -128,7 +128,7 @@ function CadastroPet() {
               <select
                 id="portePet"
                 name="portePet"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               >
                 <option value="" disabled selected>
@@ -150,7 +150,7 @@ function CadastroPet() {
                 id="racaPet"
                 name="racaPet"
                 placeholder="Digite a raça"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
             </div>
@@ -158,7 +158,7 @@ function CadastroPet() {
             {/* Botão de Salvar */}
             <button
               type="submit"
-              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-red-400 text-white py-2 px-4 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300"
             >
               Salvar
             </button>

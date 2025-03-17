@@ -27,7 +27,7 @@ function Login() {
                 id="email"
                 name="email"
                 placeholder="Digite seu email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
             </div>
@@ -42,7 +42,7 @@ function Login() {
                 id="password"
                 name="password"
                 placeholder="Digite sua senha"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
             </div>
@@ -50,7 +50,7 @@ function Login() {
             {/* Botão de Login */}
             <button
               type="submit"
-              className="w-full bg-purple-700 text-white py-2 px-4 rounded-md hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-red-400 text-white py-2 px-4 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-400"
             >
               Entrar
             </button>
@@ -60,7 +60,7 @@ function Login() {
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-600">
               Não está registrado?
-              <a href="/cadastro" className="text-purple-600 hover:text-purple-500">
+              <a href="/cadastro" className="text-red-400 hover:text-red-300">
                 Crie uma conta
               </a>
             </p>
