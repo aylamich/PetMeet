@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logo from '/logo.png'; // Importação da logo
 function CadastroPet() {
+  // Declarações de estados para os campos do formulário
   const [idade, setIdade] = useState(''); // Idade do pet, inicia vazia
   const [unidadeIdade, setUnidadeIdade] = useState('anos'); // Valor padrão: Anos
   const [mostrarModalSucesso, setMostrarModalSucesso] = useState(false); // Modal de Sucesso: Oculto, só mostra quando bem sucedido
@@ -19,7 +20,8 @@ function CadastroPet() {
 
   // Validar formulário ao enviar
   const handleSubmit = (event) => {
-    event.preventDefault();
+    event.preventDefault();  // Evite que a página seja recarregada ao enviar o formulário, para processar dados de formulários sem recarregar a página
+
 
     // Validar idade (deve ter exatamente 1 ou 2 números)
     if (!/^\d{1,2}$/.test(idade)) { // RegEx que valida se tem 1 ou 2 números, se não tiver, retorna o alerta
@@ -93,7 +95,7 @@ function CadastroPet() {
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                     required>
 
-                    <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option> {/* Se a idade for 1, exibe Ano, senão, Anos */}
+                    <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option> {/* Se a idade for 1, exibe Ano, senão, Anos  verdadeiro : falso*/}
                     <option value="meses">{idade === '1' ? 'Mês' : 'Meses'}</option> {/* Se a idade for 1, exibe Mês, senão, Meses */}
                   </select>
                 </div>
@@ -142,7 +144,7 @@ function CadastroPet() {
         <div id="modalSucessoPet" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-8 rounded-lg shadow-lg text-center">
             <h3 className="text-2xl font-bold text-green-600 mb-4">Salvo com sucesso!</h3>
-            <p className="text-gray-700">O cadastro do pet foi concluído.</p>
+            <p className="text-gray-700">O cadastro do pet foi concluído. Você será redirecionado a página de Login</p>
           </div>
         </div>
       )}
