@@ -89,15 +89,15 @@ function Cadastro() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Imagem */}
       <div
-        className="w-3/5 bg-cover bg-center"
+        className="hidden md:block md:w-3/5 bg-cover bg-center" // Oculta em telas pequenas, exibe em telas médias/grandes 3 de 5 blocos
         style={{ backgroundImage: `url(${logo})` }} // Logo PetMeet
       ></div>
 
       {/* Lado direito: Formulário de Cadastro */}
-      <div className="w-2/5 flex items-center justify-center bg-white"> {/* Ocupa 2 de 5 blocos na tela */}
+      <div className="w-full md:w-2/5 flex items-center justify-center bg-white"> {/* Ocupa 2 de 5 blocos na tela em telas médias e grandes e em pequenas toda a largura */}
         <div className="w-full max-w-md p-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Cadastro</h2>
 
@@ -106,7 +106,7 @@ function Cadastro() {
             {/* Campo de Nome Completo */}
             <div className="mb-4">
               <label htmlFor="nomeCompleto" className="block text-sm font-medium text-gray-700">
-                Nome Completo
+                Nome Completo<span className="text-red-500">*</span>
               </label>
               <input type="text" id="nomeCompleto" name="nomeCompleto" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
                 onChange={handleNomeCompletoChange}
@@ -116,16 +116,16 @@ function Cadastro() {
             {/* Campo de Email */}
             <div className="mb-4">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                Email<span className="text-red-500">*</span>
               </label>
-              <input type="email" id="email" name="email" placeholder="Digite seu email" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required/> {/* O type EMAIL já tem a validação junto caso a pessoa não coloque um @ */}
             </div>
 
             {/* Campo de selecionar gênero */}
             <div className="mb-4">
               <label htmlFor="genero" className="block text-sm font-medium text-gray-700">
-                Gênero
+                Gênero<span className="text-red-500">*</span>
               </label> 
               <select id="genero" name="genero" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required>
@@ -141,7 +141,7 @@ function Cadastro() {
             {/* Campo de Data de Nascimento */}
             <div className="mb-4">
                 <label htmlFor="dataNascimento" className="block text-sm font-medium text-gray-700">
-                  Data de Nascimento
+                  Data de Nascimento<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -158,7 +158,7 @@ function Cadastro() {
             {/* Campo de Estado */}
             <div className="mb-4">
               <label htmlFor="estado" className="block text-sm font-medium text-gray-700">
-                Estado
+                Estado<span className="text-red-500">*</span>
               </label>
               <select id="estado" name="estado" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required>
@@ -176,7 +176,7 @@ function Cadastro() {
              {/* Campo de Cidade */}
              <div className="mb-4">
               <label htmlFor="cidade" className="block text-sm font-medium text-gray-700">
-                Cidade
+                Cidade<span className="text-red-500">*</span>
               </label>
               <select id="cidade" name="cidade" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required>
@@ -194,7 +194,7 @@ function Cadastro() {
             {/* Campo de Senha, chama as funções pra esconder os requisitos */}
             <div className="mb-6">
               <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
-                Senha
+                Senha<span className="text-red-500">*</span>
               </label>
               <input type="password" id="senha" name="senha" placeholder="Digite sua senha" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 onFocus={handleSenhaFocus} 

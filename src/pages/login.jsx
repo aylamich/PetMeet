@@ -3,15 +3,15 @@ import logo from '/logo.png'; // Importação da logo
 
 function Login() {
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Logo */}
       <div
-        className="w-3/5 bg-cover bg-center" //A imagem ocupa 3 blocos de 5
+        className="hidden md:block md:w-3/5 bg-cover bg-center" // Oculta em telas pequenas, exibe em telas médias/grandes 3 de 5 blocos
         style={{ backgroundImage: `url(${logo})` }} // Logo de fundo
       ></div>
 
       {/* Lado direito: Formulário de Login */}
-      <div className="w-2/5 flex items-center justify-center bg-white"> {/* Formulário ocupada 2 blocos de 5 */}
+      <div className="w-full md:w-2/5 flex items-center justify-center bg-white"> {/* Formulário ocupada 2 blocos de 5 em telas grandes e médias (ocupa toda a largura em telas pequenas)*/}
         <div className="w-full max-w-md p-8"> {/* Ocupa 100% do container pai, tem padding de 32px e limita o tamanho máximo */}
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Login</h2>
 
