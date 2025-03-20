@@ -4,11 +4,11 @@ import dogImage from '/dogImage.png'; // Importação da imagem do lado direito
 
 function LandingPage() {
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Conteúdo */}
-      <div className="w-1/2 flex flex-col p-12 bg-red-50">
+      <div className="w-full md:w-1/2 flex flex-col p-6 md:p-12 bg-red-50">
         {/* Título "PetMeet" no topo com a patinha */}
-        <div className="flex items-center mt-20 mb-8">
+        <div className="flex items-center mt-10 md:mt-20 mb-6 md:mb-8">
           <h1 className="font-acme text-8xl font-bold text-blue-900">
             PetMeet
           </h1>
@@ -54,7 +54,7 @@ function LandingPage() {
         <img
           src={dogImage}
           alt="Cãozinho"
-          className="w-96 h-auto object-cover" // Ajusta a imagem para caber no espaço sem distorcer
+          className="w-96 md:w-96 h-auto object-cover" // Ajusta a imagem para caber no espaço sem distorcer, tem responsividade pra telas medias
         />
       </div>
     </div>
