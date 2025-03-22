@@ -8,6 +8,7 @@ function Cadastro() {
   const [mostrarRequisitosSenha, setMostrarRequisitosSenha] = useState(false); // Initializa o estado mostrarRequisitosSenha com um valor inicial de false (não aparece)
   const [carregando, setCarregando] = useState(false); // Estado para controlar o spinner de carregamento
   const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
+  const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para mostrar/esconder a senha
 
 
    // Estados para os requisitos da senha
@@ -250,12 +251,63 @@ function Cadastro() {
               <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
                 Senha<span className="text-red-500">*</span>
               </label>
-              <input type="password" id="senha" name="senha" placeholder="Digite sua senha" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <div className="relative">
+              <input type={mostrarSenha ? "text" : "password"} id="senha" name="senha" placeholder="Digite sua senha" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 onChange={(e) => validarSenha(e.target.value)}
                 onFocus={handleSenhaFocus} // Quando o usuário clica no campo de senha
                 onBlur={handleSenhaBlur} // Quando o usuário sai do campo de senha
                 required
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                onClick={() => setMostrarSenha(!mostrarSenha)}
+              >
+                {mostrarSenha ? (
+                  // Ícone de olho aberto
+                  <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="icon icon-tabler icons-tabler-outline icon-tabler-eye"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                  <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                </svg>
+                 
+                ) : (
+                  // Ícone de olho fechado
+                  <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="icon icon-tabler icons-tabler-outline icon-tabler-eye-closed"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M21 9c-2.4 2.667 -5.4 4 -9 4c-3.6 0 -6.6 -1.333 -9 -4" />
+                  <path d="M3 15l2.5 -3.8" />
+                  <path d="M21 14.976l-2.492 -3.776" />
+                  <path d="M9 17l.5 -4" />
+                  <path d="M15 17l-.5 -4" />
+                </svg>
+                 
+                )}
+              </button>
+              </div>  
+
               {senhaErro && <p className="text-sm text-red-500 mt-2">{senhaErro}</p>}
 
               {mostrarRequisitosSenha && (
