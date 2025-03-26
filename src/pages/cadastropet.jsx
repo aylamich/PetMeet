@@ -65,6 +65,15 @@ function CadastroPet() {
                 required/>
             </div>
 
+            {/* Campo de Nome */}
+            <div className="mb-4">
+              <label htmlFor="nomePet" className="block text-sm font-medium text-gray-700">
+                Nome<span className="text-red-500">*</span>
+              </label>
+              <input type="text" id="nomePet" name="nomePet" placeholder="Digite o nome do seu cãozinho" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
+                required/>
+            </div>
+
             {/* Campo de Gênero do Pet */}
             <div className="mb-4">
               <label htmlFor="generoPet" className="block text-sm font-medium text-gray-700">

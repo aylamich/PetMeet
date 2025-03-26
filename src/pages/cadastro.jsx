@@ -257,11 +257,11 @@ function Cadastro() {
                 onFocus={handleSenhaFocus} // Quando o usuário clica no campo de senha
                 onBlur={handleSenhaBlur} // Quando o usuário sai do campo de senha
                 required
-              />
+              /> 
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                onClick={() => setMostrarSenha(!mostrarSenha)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // pr (padding direito), leading (altura da linha) e absolute em relação ao pai (campo de senha)
+                onClick={() => setMostrarSenha(!mostrarSenha)} // Inverte o valor atual de mostrarSenha (se era true, vira false e vice-versa), então começa false, quando eu clico vira true e assim segue, para mudar o estado
               >
                 {mostrarSenha ? (
                   // Ícone de olho aberto
