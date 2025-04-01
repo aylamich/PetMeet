@@ -18,6 +18,10 @@ function CadastroPet() {
     setUnidadeIdade(event.target.value); //Para atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
   };
 
+  const handleAdicionarOutroPet = () => {
+    window.location.reload(); // Recarrega a página para cadastrar novo pet
+  };
+
   // Validar formulário ao enviar
   const handleSubmit = (event) => {
     event.preventDefault();  // Evite que a página seja recarregada ao enviar o formulário, para processar dados de formulários sem recarregar a página
@@ -140,6 +144,15 @@ function CadastroPet() {
               </label>
               <input type="text" id="racaPet" name="racaPet" placeholder="Ex: Labrador, Golden Retriever, SRD" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
             </div>
+
+            {/* Botão de Adicionar outro pet */}
+            <button
+              type="button"
+              onClick={handleAdicionarOutroPet}
+              className="w-full bg-red-400 text-white py-2 px-4 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+            >
+              Adicionar mais um pet
+            </button>
 
             {/* Botão de Salvar */}
             <button

@@ -115,7 +115,7 @@ function LandingPage() {
         <h3 className="text-4xl font-bold mb-4">Junte-se à matilha!</h3>
         <p className="mb-8 text-lg">Comece a socializar seu cão hoje mesmo. Crie um perfil grátis e participe de eventos.</p>
         <a
-          href="/register"
+          href="/cadastro"
           className="bg-red-400 hover:bg-red-300 py-3 px-8 rounded-md text-white font-semibold text-lg"
         >
           Criar Conta

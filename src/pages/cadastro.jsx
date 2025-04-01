@@ -144,6 +144,63 @@ function Cadastro() {
     }, 3000); // 3 segundos de espera
   };
 
+// ---------------------------------------------------- //-------------------------------------------------- //
+// Script 
+// Estados para controlar UF e cidades
+const [ufSelecionado, setUfSelecionado] = useState('');
+const [cidades, setCidades] = useState([]);
+const [carregandoCidades, setCarregandoCidades] = useState(false);
+
+// Função idêntica à original, mas adaptada para React
+const selecionaUF = async (uf) => {
+  setCarregandoCidades(true);
+  try {
+    console.log("1. Enviando requisição para UF:", uf);
+    
+    const response = await fetch('/api/consultacidadeporUF', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ufSelecionado: uf })
+    });
+
+    console.log("2. Resposta recebida, status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("3. Erro na resposta:", errorText);
+      throw new Error(`Erro ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("4. Dados parseados:", data);
+    
+    if (!Array.isArray(data)) {
+      console.log("5. Dados não são array:", typeof data);
+      throw new Error("Formato de dados inválido");
+    }
+
+    setCidades(data);
+    console.log("6. Cidades atualizadas no estado");
+    
+  } catch (error) {
+    console.error("7. Erro completo:", error);
+    setCidades([]);
+  } finally {
+    setCarregandoCidades(false);
+    console.log("8. Carregamento finalizado");
+  }
+};
+
+// Handler para mudança de UF
+const handleUfChange = (e) => {
+  const uf = e.target.value;
+  setUfSelecionado(uf);
+  selecionaUF(uf);
+};
+
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Imagem */}
@@ -164,7 +221,7 @@ function Cadastro() {
               <label htmlFor="nomeCompleto" className="block text-sm font-medium text-gray-700">
                 Nome Completo<span className="text-red-500">*</span>
               </label>
-              <input type="text" id="nomeCompleto" name="nomeCompleto" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
+              <input type="text" id="nomeCompleto" name="nome_completo" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
                 onChange={handleNomeCompletoChange} // Chama a função para não deixar digitar números
                 required/>
             </div>
@@ -201,7 +258,7 @@ function Cadastro() {
                 <label htmlFor="dataNascimento" className="block text-sm font-medium text-gray-700">
                   Data de Nascimento<span className="text-red-500">*</span>
                 </label>
-                <input type="date" id="dataNascimento" name="dataNascimento" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                <input type="date" id="dataNascimento" name="data_nascimento" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                   required
                   onChange={(e) => validarDataNascimento(e.target.value)} // Validação 
                 />
@@ -212,19 +269,45 @@ function Cadastro() {
 
             {/* Campo de Estado */}
             <div className="mb-4">
-              <label htmlFor="estado" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="uf" className="block text-sm font-medium text-gray-700">
                 Estado<span className="text-red-500">*</span>
               </label>
-              <select id="estado" name="estado" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                required>
+              <select id="uf" name="uf" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required
+                value={ufSelecionado}
+                onChange={handleUfChange}>
 
                 <option value="" disabled selected>
                   Selecione seu estado
                 </option>
-                {/* Opções de estado vou adicionar pelo BD, por enquanto vou por so algumas*/}
-                <option value="RS">RS</option>
-                <option value="SC">SC</option>
-                <option value="PR">PR</option>
+                    <option value="RO">Rondônia</option>
+                    <option value="AC">Acre</option>
+                    <option value="AM">Amazonas</option>
+                    <option value="RR">Roraima</option>
+                    <option value="AP">Amapá</option>
+                    <option value="PA">Pará</option>
+                    <option value="TO">Tocantins</option>
+                    <option value="MA">Maranhão</option>
+                    <option value="PI">Piauí</option>
+                    <option value="CE">Ceará</option>
+                    <option value="RN">Rio Grande do Norte</option>
+                    <option value="PB">Paraíba</option>
+                    <option value="PE">Pernambuco</option>
+                    <option value="AL">Alagoas</option>
+                    <option value="SE">Sergipe</option>
+                    <option value="BA">Bahia</option>
+                    <option value="MG">Minas Gerais</option>
+                    <option value="ES">Espírito Santo</option>
+                    <option value="RJ">Rio de Janeiro</option>
+                    <option value="SP">São Paulo</option>
+                    <option value="PR">Paraná</option>
+                    <option value="SC">Santa Catarina</option>
+                    <option value="RS">Rio Grande do Sul</option>
+                    <option value="MS">Mato Grosso do Sul</option>
+                    <option value="MT">Mato Grosso</option>
+                    <option value="GO">Goiás</option>
+                    <option value="DF">Distrito Federal</option>
+                    
               </select>
             </div>
 
@@ -233,16 +316,15 @@ function Cadastro() {
               <label htmlFor="cidade" className="block text-sm font-medium text-gray-700">
                 Cidade<span className="text-red-500">*</span>
               </label>
-              <select id="cidade" name="cidade" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                required>
-
-                <option value="" disabled selected>
-                  Selecione sua cidade
+              <select id="cidade" name="cbcidade" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required 
+                >
+              <option value="" selected>Selecione uma cidade</option>
+              {cidades.map(cidade => (
+              <option key={cidade.id} value={cidade.id}>
+              {cidade.nomeCidade}
                 </option>
-                {/* Opções de cidade vou adicionar pelo BD filtrando por ESTADO */}
-                <option value="Porto Alegre">Porto Alegre</option>
-                <option value="Florianópolis">Florianópolis</option>
-                <option value="Curitiba">Curitiba</option>
+              ))}
               </select>
             </div>
 
