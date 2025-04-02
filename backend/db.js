@@ -18,13 +18,12 @@ async function connect(){
 
 connect();
 
-async function login(usuario, senha){
+async function login(usuario, senha) {
     const conn = await connect();
     const sql = "SELECT email, senha FROM usuario WHERE email = ? AND senha = ?";
-
     const values = [usuario, senha];
-    let resultado = await conn.query(sql, values);
-    return resultado;
+    const [rows] = await conn.query(sql, values);
+    return rows;
 }
 
 async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) {    
@@ -54,6 +53,13 @@ async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nas
         .then(() => console.log('Usuário atualizado com sucesso!'))
         .catch(error => console.error('Erro ao atualizar usuário:', error))
 }
+
+/*async function consultaUsuarioPorId(id) {
+    const conn = await connect();
+    const sql = "SELECT * FROM usuario WHERE id = ?";
+    let resultado = await conn.query(sql, [id]);
+    return resultado[0]; // Retorna apenas o primeiro registro (o usuário específico)
+}*/
 
 /*async function consultaCliente(paginaAtual, registrosPorPagina){    
 
@@ -113,16 +119,16 @@ async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = n
 
 async function consultaPetPorId(id) {
     const conn = await connect();
-    const sql ="SELECT p.id, p.foto, p.nome, p.sexo, p.idade, p.porte, p.raca, u.id AS usuario_id, u.nome_completo AS dono_nome FROM  pet p      JOIN usuario u ON p.usuario_id = u.id WHERE p.id = ?";
-    let resultado = await conn.query(sql, [id]);
-    return resultado[0]; // Retorna apenas o primeiro registro (o pet específico)
+    const sql = "SELECT p.id, p.foto, p.nome, p.sexo, p.idade, p.porte, p.raca, u.id AS usuario_id, u.nome_completo AS dono_nome FROM pet p JOIN usuario u ON p.usuario_id = u.id WHERE p.id = ?";
+    const [rows] = await conn.query(sql, [id]);
+    return rows[0];
 }
 
 async function consultaPetPorDono(id) {
     const conn = await connect();
     const sql = "SELECT * FROM pet WHERE usuario_id = ?";
-    let resultado = await conn.query(sql, [id]);
-    return resultado[0]; // Retorna todos os pets do dono (array)
+    const [rows] = await conn.query(sql, [id]);
+    return rows;
 }
 
 
@@ -270,33 +276,28 @@ async function excluirEvento(id) {
 
 
 async function consultaCidadeporUF(ufSelecionado){
+    console.log(`Consultando cidades para UF: ${ufSelecionado}`);
     const conn = await connect();
-    const sql = "SELECT * FROM Cidade WHERE uf = ?";
+    const sql = "SELECT * FROM cidade WHERE uf = ?";
 
     const values = [ufSelecionado];
-    let resultado = await conn.query(sql, values);
-    return resultado;
-}
+   // let resultado = await conn.query(sql, values);
+    let [rows] = await conn.query(sql, values);
+    return rows;
+}    
 
 
-async function consultaCidade(){    
-
+async function consultaCidade() {    
     const conn = await connect();
-    const sql = "SELECT * FROM Cidade";
-
-    let resultado = await conn.query(sql, []);
-
-    //console.log("consultaCidade");   
-   // console.log(resultado);
-    return resultado;
+    const sql = "SELECT * FROM cidade";
+    const [rows] = await conn.query(sql, []);
+    return rows;
 }
 
 module.exports = {consultaCidadeporUF,
                   consultaCidade,
                   login,
-                  cadastrarUsuario,
-                  consultaUsuario,
-                  consultaUsuarioPorId,
+                  cadastrarUsuario,        
                   alterarUsuario,
                   cadastrarPet,
                   consultaPetPorId,

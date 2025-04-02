@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react'; // Importa o hook useEffect do React
 import logo from '/logo.png'; // Importação da logo
 
 function Cadastro() {
@@ -146,59 +147,67 @@ function Cadastro() {
 
 // ---------------------------------------------------- //-------------------------------------------------- //
 // Script 
-// Estados para controlar UF e cidades
+
 const [ufSelecionado, setUfSelecionado] = useState('');
 const [cidades, setCidades] = useState([]);
-const [carregandoCidades, setCarregandoCidades] = useState(false);
+const [cidadeSelecionada, setCidadeSelecionada] = useState('');
 
-// Função idêntica à original, mas adaptada para React
-const selecionaUF = async (uf) => {
-  setCarregandoCidades(true);
-  try {
-    console.log("1. Enviando requisição para UF:", uf);
-    
-    const response = await fetch('/api/consultacidadeporUF', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ufSelecionado: uf })
-    });
+/*
+      const carregarCidadesPorUF = async (ufSelecionado) => {
+        console.log("carregamento de cidades para UF:", ufSelecionado);
+        try {
+          const response = await fetch('/api/consultacidadeporUF', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ufSelecionado })
+          });
+          
+          console.log("Resposta da API recebida. Status:", response.status);
+          
+          
+          const data = await response.json();
+          console.log("Dados recebidos da API:", data);
+          setCidades(data);
+          setCidadeSelecionada('');
+        } catch (error) {
+          console.error('Erro ao carregar cidades:', error);
+        }
+      };
+      */
 
-    console.log("2. Resposta recebida, status:", response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("3. Erro na resposta:", errorText);
-      throw new Error(`Erro ${response.status}: ${errorText}`);
-    }
 
-    const data = await response.json();
-    console.log("4. Dados parseados:", data);
-    
-    if (!Array.isArray(data)) {
-      console.log("5. Dados não são array:", typeof data);
-      throw new Error("Formato de dados inválido");
-    }
+      const carregarCidadesPorUF = async (ufSelecionado) => {
+        console.log("carregamento de cidades para UF:", ufSelecionado);
+        try {
+          const response = await fetch('/api/consultacidadeporUF', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ufSelecionado }) // ← Enviando no body
+          });
+          
+          const data = await response.json();
+          setCidades(data);
+          setCidadeSelecionada('');
+        } catch (error) {
+          console.error('Erro:', error);
+        }
+      };
 
-    setCidades(data);
-    console.log("6. Cidades atualizadas no estado");
-    
-  } catch (error) {
-    console.error("7. Erro completo:", error);
-    setCidades([]);
-  } finally {
-    setCarregandoCidades(false);
-    console.log("8. Carregamento finalizado");
-  }
-};
+        // Efeito para carregar cidades quando UF muda
+        useEffect(() => {
+          if (ufSelecionado) {
+            carregarCidadesPorUF(ufSelecionado);
+          } else {
+            setCidades([]);
+            setCidadeSelecionada('');
+          }
+        }, [ufSelecionado]);
 
-// Handler para mudança de UF
-const handleUfChange = (e) => {
-  const uf = e.target.value;
-  setUfSelecionado(uf);
-  selecionaUF(uf);
-};
+        const handleCidadeChange = (e) => {
+          const cidadeId = e.target.value;
+          setCidadeSelecionada(cidadeId);
+
+        };
 
 
   return (
@@ -275,7 +284,7 @@ const handleUfChange = (e) => {
               <select id="uf" name="uf" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
                 value={ufSelecionado}
-                onChange={handleUfChange}>
+                onChange={(e) => setUfSelecionado(e.target.value)}>
 
                 <option value="" disabled selected>
                   Selecione seu estado
@@ -317,14 +326,23 @@ const handleUfChange = (e) => {
                 Cidade<span className="text-red-500">*</span>
               </label>
               <select id="cidade" name="cbcidade" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                  value={cidadeSelecionada}
+                  onChange={handleCidadeChange}
+                  disabled={!ufSelecionado}
                 required 
                 >
-              <option value="" selected>Selecione uma cidade</option>
-              {cidades.map(cidade => (
-              <option key={cidade.id} value={cidade.id}>
-              {cidade.nomeCidade}
+              <option value="">
+              {cidades.length === 0 && ufSelecionado 
+                ? 'Nenhuma cidade encontrada' 
+                : !ufSelecionado 
+                  ? 'Selecione um estado primeiro' 
+                  : 'Selecione uma cidade'}
+              </option>
+              {cidades.map((cidade) => (
+                <option key={cidade.id} value={cidade.id}>
+                  {cidade.nomeCidade}
                 </option>
-              ))}
+             ))}
               </select>
             </div>
 

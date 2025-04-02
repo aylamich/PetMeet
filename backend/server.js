@@ -3,47 +3,68 @@ const path = require('path');
 const app = express();
 const port = 3000;
 const db = require('./db.js');
+const cors = require('cors');
 
 
 // No início do server.js
 console.log('Tentando importar db...');
-const db = require('./db');
 console.log('db importado com sucesso:', db ? 'Sim' : 'Não');
 
 // Servir ficheiros estáticos (como o HTML)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'] 
+}));
+
 // Definir uma rota GET
 app.get('/api/mensagem', (req, res) => {
   res.json({ mensagem: 'Olá, esta é a resposta da rota!' });
 });
 
-app.post('/api/consultacidade', async (req, res) =>  {
-
-  let resultado = await db.consultaCidade(); 
-  //console.log(resultado);
-  res.send(resultado);
-});
-
-app.post('/api/consultacidadeporUF', async (req, res) => {
+app.get('/api/consultacidade', async (req, res) => {
   try {
-    console.log("BACKEND - Recebido UF:", req.body.ufSelecionado);
-    
-    const resultado = await db.consultaCidadeporUF(req.body.ufSelecionado);
-    console.log("BACKEND - Resultado da query:", resultado);
-    
-    // Garanta que está enviando um array
-    const cidades = resultado.rows || resultado || [];
-    console.log("BACKEND - Enviando:", cidades);
-    
-    res.json(cidades);
-    
+    const resultado = await db.consultaCidade();
+    res.json(resultado);
   } catch (error) {
-    console.error("BACKEND - Erro:", error);
-    res.status(500).json({ error: error.message });
+    console.error('Erro ao consultar cidades:', error);
+    res.status(500).json({ error: 'Erro ao consultar cidades' });
   }
 });
+
+// Rota para consultar cidades por UF
+
+/*app.post('/api/consultacidadeporUF', async (req, res) => { // ← Alterado para POST
+  console.log("Chegou na consulta cidade por UF");
+  const { ufSelecionado } = req.query;
+  const resultado = await db.consultaCidadeporUF(ufSelecionado);
+  res.json(resultado);
+});*/
+
+app.post('/api/consultacidadeporUF', async (req, res) => {
+  console.log("Corpo recebido:", req.body); // Debug
+  
+  const { ufSelecionado } = req.body; // ← Corrigido para req.body
+  
+  if (!ufSelecionado) {
+    return res.status(400).json({ error: "UF não fornecida" });
+  }
+
+  try {
+    const resultado = await db.consultaCidadeporUF(ufSelecionado);
+    console.log("Resultado do banco:", resultado); // Debug
+    
+    // Garante que sempre retorne um array
+    res.json(Array.isArray(resultado) ? resultado : []);
+
+  } catch (error) {
+    console.error("Erro na consulta:", error);
+    res.status(500).json({ error: "Erro no servidor" });
+  }
+});
+
 
 app.post('/api/login', async (req, res) => {
   const {email, senha} = req.body;
@@ -58,7 +79,7 @@ app.post('/api/cadastrousuario', (req, res) => {
     console.log("Chegou no cadastro usuário");
     const {nome_completo, email, genero, data_nascimento, uf, id_cidade, senha} = req.body;
 
-    db.cadastrarUsuário(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
+    db.cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
     
     res.send(`Nome: ${nome_completo}`);
   });
@@ -66,7 +87,7 @@ app.post('/api/cadastrousuario', (req, res) => {
   app.post('/api/alterarusuario', (req, res) => {
     const {usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha} = req.body;
     
-    db.alterarcliente(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
+    db.alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
     console.log(id_cidade);
     
     res.send(`Nome: ${nome}`);
