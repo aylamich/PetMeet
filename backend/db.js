@@ -1,3 +1,5 @@
+const bcrypt = require('bcrypt');
+
 async function connect(){
 
     if(global.connection && global.connection.state != 'disconnected' ){
@@ -26,9 +28,24 @@ async function login(usuario, senha) {
     return rows;
 }
 
-async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) {    
+
+async function buscarUsuarioPorEmail(email) {
     const conn = await connect();
-    const sql = "INSERT INTO usuario (nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) VALUES (?, ?, ?, ?, ?, ?)";
+    try {
+      const [rows] = await conn.query(
+        "SELECT id, nome_completo, email, senha FROM usuario WHERE email = ?", 
+        [email]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar usuário por email:', error);
+      throw error; // Lança o erro para ser tratado na rota
+    }
+  } 
+
+/*async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) {    
+    const conn = await connect();
+    const sql = "INSERT INTO usuario (nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) VALUES (?, ?, ?, ?, ?, ?, ?)";
     
     const senhaHash = await bcrypt.hash(senha, 10); // criptografando a senha com bcrypt
     console.log(senhaHash);
@@ -41,7 +58,63 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
         .catch((error) => {
             console.error('Erro ao cadastrar usuário:', error);
         })
+
+    const [result] = await conn.query(sql, values); // Desestrutura para pegar o resultado
+    console.log('Usuário cadastrado com sucesso! ID:', result.insertId);
+    return result.insertId; // Retorna o ID do usuário recém-criado    
+}*/
+
+async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) {    
+    const conn = await connect();
+    const sql = "INSERT INTO usuario (nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    const senhaHash = await bcrypt.hash(senha, 10);
+    const values = [nome_completo, email, genero, data_nascimento, uf, id_cidade, senhaHash];
+    
+    try {
+      const [result] = await conn.query(sql, values);
+      console.log('Usuário cadastrado com sucesso! ID:', result.insertId);
+      return result.insertId;
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        console.log('Erro: Email já cadastrado:', email);
+        throw new Error('Este email já está cadastrado.');
+      }
+      console.error('Erro ao cadastrar usuário:', error);
+      throw error; // Propaga o erro com detalhes
+    //} finally {
+     // await conn.end();
+    }
+  }
+
+
+  async function consultaUsuarioPorId(id) {
+    const conn = await connect();
+    try {
+        const [rows] = await conn.query(`
+            SELECT 
+                u.id, 
+                u.nome_completo, 
+                u.email, 
+                u.genero, 
+                u.data_nascimento, 
+                u.uf, 
+                u.id_cidade,
+                c.nomeCidade as cidade_nome
+            FROM usuario u
+            INNER JOIN cidade c ON u.id_cidade = c.id
+            WHERE u.id = ?`, 
+            [id]
+        );
+        
+        if (rows.length === 0) return null;
+        
+        return rows[0];
+    } catch (error) {
+        console.error('Erro ao buscar usuário por ID:', error);
+        throw error;
+    }
 }
+
 
 async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade) {
     const conn = await connect();
@@ -57,47 +130,9 @@ async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nas
 /*async function consultaUsuarioPorId(id) {
     const conn = await connect();
     const sql = "SELECT * FROM usuario WHERE id = ?";
-    let resultado = await conn.query(sql, [id]);
-    return resultado[0]; // Retorna apenas o primeiro registro (o usuário específico)
+    const [rows] = await conn.query(sql, [id]);
+    return rows[0]; // Retorna apenas o primeiro registro (o usuário específico)
 }*/
-
-/*async function consultaCliente(paginaAtual, registrosPorPagina){    
-
-    const conn = await connect();
-    let sql = `
-                SELECT 
-                    c.id AS id, 
-                    c.nomeCompleto AS nomeCompleto, 
-                    c.contato AS contato, 
-                    c.email AS email, 
-                    c.rua AS rua, 
-                    c.numero AS numero, 
-                    c.bairro AS bairro, 
-                    c.cep AS cep, 
-                    c.uf AS uf, 
-                    ci.id AS idCidade, 
-                    ci.nomeCidade AS nomeCidade 
-                FROM 
-                    Cliente c, 
-                    cidade ci 
-                WHERE 
-                    c.idCidade = ci.id 
-                    
-                ORDER BY 
-                    TRIM(c.nomeCompleto) ASC`;    ;
-
-        let values = [];            
-        if (paginaAtual != null && registrosPorPagina != null) {
-            sql += ' LIMIT ? OFFSET ?';
-            values = [registrosPorPagina, paginaAtual];
-        }        
-
-    let resultado = await conn.query(sql, values);
-    //console.log(paginaAtual);''
-    //console.log(registrosPorPagina);
-    return resultado;
-}
-*/
 
 
 async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = null) {
@@ -112,6 +147,7 @@ async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = n
         })
         .catch((error) => {
             console.error('Erro ao cadastrar pet:', error);
+            throw error; // Lança o erro para ser tratado na rota
         })
        
 }
@@ -130,6 +166,26 @@ async function consultaPetPorDono(id) {
     const [rows] = await conn.query(sql, [id]);
     return rows;
 }
+
+// Consulta pet por usuário (retorna todos os pets do usuário)
+async function consultaPetsPorUsuario(usuario_id) {
+    const conn = await connect();
+    try {
+        const [rows] = await conn.query(
+            `SELECT id, 
+                   CASE WHEN foto IS NOT NULL THEN foto ELSE NULL END as foto,
+                    nome, sexo, idade, porte, raca 
+             FROM pet 
+             WHERE usuario_id = ?`,
+            [usuario_id]
+          );
+        return rows;
+    } catch (error) {
+        console.error('Erro ao buscar pets por usuário:', error);
+        throw error;
+    }
+}
+
 
 
 /*async function excluirAnimal(id){    
@@ -307,6 +363,11 @@ module.exports = {consultaCidadeporUF,
                   consultarEventos,
                   alterarEvento,
                   excluirEvento,
+                  buscarUsuarioPorEmail,
+           
+                  consultaUsuarioPorId,
+                  consultaPetsPorUsuario,
+                  
 
                   
                 

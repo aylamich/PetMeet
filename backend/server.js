@@ -4,20 +4,43 @@ const app = express();
 const port = 3000;
 const db = require('./db.js');
 const cors = require('cors');
+const multer = require('multer');
+const bodyParser = require('body-parser');
+const fileURLToPath = require('url');
 
 
-// No início do server.js
 console.log('Tentando importar db...');
 console.log('db importado com sucesso:', db ? 'Sim' : 'Não');
 
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type'], // Permite o cabeçalho necessário para multipart/form-data
+}));
+
+app.use('/uploads', express.static('uploads'));
 // Servir ficheiros estáticos (como o HTML)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'] 
-}));
+
+// Configuração do multer para salvar arquivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Pasta onde as fotos serão salvas
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname); // Nome único para o arquivo
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB em bytes
+});
+
+const bcrypt = require('bcrypt'); // Importando bcrypt para hash de senhas
+
 
 // Definir uma rota GET
 app.get('/api/mensagem', (req, res) => {
@@ -34,14 +57,6 @@ app.get('/api/consultacidade', async (req, res) => {
   }
 });
 
-// Rota para consultar cidades por UF
-
-/*app.post('/api/consultacidadeporUF', async (req, res) => { // ← Alterado para POST
-  console.log("Chegou na consulta cidade por UF");
-  const { ufSelecionado } = req.query;
-  const resultado = await db.consultaCidadeporUF(ufSelecionado);
-  res.json(resultado);
-});*/
 
 app.post('/api/consultacidadeporUF', async (req, res) => {
   console.log("Corpo recebido:", req.body); // Debug
@@ -66,23 +81,96 @@ app.post('/api/consultacidadeporUF', async (req, res) => {
 });
 
 
-app.post('/api/login', async (req, res) => {
+/*app.post('/api/login', async (req, res) => {
+ 
   const {email, senha} = req.body;
-  //console.log(email);
-  //console.log(senha);
-  let resultado = await db.login(email, senha);
- // console.log(resultado); 
+  console.log(email);
+  console.log(senha);
+ let resultado = await db.login(email, senha);
+ console.log(resultado); 
   res.send(resultado)
+});*/
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+    console.log("Tentativa de login:", email);
+
+    // 2. Busca o usuário (agora dentro de try-catch)
+    const usuario = await db.buscarUsuarioPorEmail(email);
+    
+    if (!usuario) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    // 3. Verificação do hash
+    if (!usuario.senha?.startsWith('$2')) {
+      console.error("Hash inválido para:", email);
+      return res.status(500).json({ error: 'Erro na configuração do servidor' });
+    }
+
+    // 4. Comparação de senha digitada com a criptografada
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    
+    if (!senhaValida) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    // 5. Resposta de sucesso
+    res.json({ usuario_id: usuario.id, nome: usuario.nome_completo });
+    console.log("Login bem-sucedido:", email);
+
+  } catch (error) {
+    console.error("Erro no login:", error);
+    res.status(500).json({ error: 'Erro interno no servidor' });
+  }
 });
 
-app.post('/api/cadastrousuario', (req, res) => {
-    console.log("Chegou no cadastro usuário");
-    const {nome_completo, email, genero, data_nascimento, uf, id_cidade, senha} = req.body;
+/*app.post('/api/cadastrousuario', async (req, res) => {
+  console.log("Chegou no cadastro usuário");
+  const { nome_completo, email, genero, data_nascimento, uf, id_cidade, senha } = req.body;
 
-    db.cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
-    
-    res.send(`Nome: ${nome_completo}`);
-  });
+  try {
+    await db.cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
+    res.status(200).send('Usuário cadastrado com sucesso!', usuario_id);
+  } catch (error) {
+    console.error('Erro no servidor:', error);
+    res.status(500).send('Erro ao cadastrar usuário');
+  }
+  
+});*/
+
+app.post('/api/cadastrousuario', async (req, res) => {
+  console.log("Chegou no cadastro usuário");
+  const { nome_completo, email, genero, data_nascimento, uf, id_cidade, senha } = req.body;
+
+  try {
+    const usuario_id = await db.cadastrarUsuario(nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
+    res.status(200).json({ message: 'Usuário cadastrado com sucesso!', usuario_id });
+  } catch (error) {
+    console.error('Erro no servidor:', error);
+    res.status(500).send('Erro ao cadastrar usuário');
+  }
+});
+
+app.get('/api/consultausuario', async (req, res) => {
+  try {
+      const usuario_id = req.query.id;
+      if (!usuario_id) {
+          return res.status(400).json({ error: 'ID do usuário não fornecido' });
+      }
+
+      const usuario = await db.consultaUsuarioPorId(usuario_id);
+      if (!usuario) {
+          return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+
+      res.status(200).json(usuario);
+  } catch (error) {
+      console.error('Erro ao consultar usuário:', error);
+      res.status(500).json({ error: 'Erro ao buscar usuário' });
+  }
+});
 
   app.post('/api/alterarusuario', (req, res) => {
     const {usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha} = req.body;
@@ -116,14 +204,47 @@ app.post('/api/cadastrousuario', (req, res) => {
   });*/
 
 
-app.post('/api/cadastropet', (req, res) => {
+/*app.post('/api/cadastropet', (req, res) => {
     const {usuario_id, foto, nome, sexo, idade, porte, raca} = req.body;
     
     db.cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca);
 
     res.send(`Nome: ${nome}`);
-});
+});*/
 
+app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
+  console.log('Arquivo recebido:', req.file);
+  console.log('Corpo da requisição:', req.body);
+
+  try {
+    // Extrai os dados do formulário
+    const { nome, sexo, idade, porte, raca } = req.body;
+    const usuario_id = req.body.usuario_id;
+    const foto = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // Validação básica
+    if (!nome || !sexo || !idade || !porte) {
+      return res.status(400).json({ error: 'Dados incompletos' });
+    }
+
+    // Chama a função do banco de dados
+    const petId = await db.cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca || null);
+
+    res.status(200).json({
+      success: true,
+      message: 'Pet cadastrado com sucesso!',
+      petId
+    });
+
+  } catch (error) {
+    console.error('Erro no cadastro:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao cadastrar pet',
+      details: error.message
+    });
+  }
+});
 
 
 app.post('/api/consultapetpordono', async (req, res) =>  {
@@ -131,6 +252,23 @@ app.post('/api/consultapetpordono', async (req, res) =>  {
   let resultado = await db.consultaPetPorDono(usuarioSelecionado);
   //console.log(resultado);
   res.send(resultado);
+});
+
+// Rota para buscar pets do usuário
+app.get('/api/consultapets', async (req, res) => {
+  try {
+      const usuario_id = req.query.usuario_id;
+      if (!usuario_id) {
+          return res.status(400).json({ error: 'ID do usuário não fornecido' });
+      }
+
+      const pets = await db.consultaPetsPorUsuario(usuario_id);
+      res.status(200).json(pets);
+      
+  } catch (error) {
+      console.error('Erro ao consultar pets:', error);
+      res.status(500).json({ error: 'Erro ao buscar pets' });
+  }
 });
 
 app.post('/api/alterarpet', (req, res) => {
@@ -187,6 +325,11 @@ app.post('/api/excluirevento', (req, res) => {
   res.send([]);
 });  
 
+
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Iniciar o servidor
 app.listen(port, () => {
