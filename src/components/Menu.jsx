@@ -69,6 +69,15 @@ const Menu = () => {
     window.location.href = "/login";
   };
 
+  const handleSaveProfile = (updatedUsuario) => {
+    setDadosUsuario(updatedUsuario);
+    setUsuario(updatedUsuario.nome_completo || usuario); // Atualiza o nome exibido no menu
+  };
+
+  const handleSavePet = (petAtualizado) => {
+    setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
+  };
+
   const exibeConfUsuario = () => {
     setShowConfUsuario(!showConfUsuario);
   };
@@ -293,7 +302,7 @@ const Menu = () => {
         {/* Modal de Edição do Perfil */}
         <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showEditProfileModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <div className={`transform transition-all duration-300 w-full max-w-3xl ${showEditProfileModal ? 'scale-100' : 'scale-95'}`}>
-            <EditarPerfil onClose={closeEditProfileModal} />
+            <EditarPerfil onClose={closeEditProfileModal} onSave={handleSaveProfile} />
           </div>
         </div>
 
@@ -303,9 +312,10 @@ const Menu = () => {
             <EditarPetModal
               pets={dadosPets} // Passa a lista de pets
               onClose={() => setShowEditPetModal(false)}
-              onSave={(petAtualizado) => {
-                setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
-              }}
+              //onSave={(petAtualizado) => {
+                //setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
+              //}}
+              onSave={handleSavePet}
             />
           </div>
         </div>

@@ -116,18 +116,29 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
 }
 
 
-async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade) {
+async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha) {
     const conn = await connect();
-    const sql = "UPDATE usuario SET nome_completo = ?, email = ?, genero = ?, data_nascimento = ?, uf = ?, id_cidade = ? WHERE id = ?";
-    const values = [nome_completo, email, genero, data_nascimento, uf, id_cidade, usuario_id];
-    console.log(sql, values);
-    await conn.execute(sql, values)
-      .then(() => console.log('Usuário atualizado com sucesso!'))
-      .catch(error => {
-        console.error('Erro ao atualizar usuário:', error);
-        throw error;
-      });
+    try {
+      const sql = `
+        UPDATE usuario 
+        SET nome_completo = ?, email = ?, genero = ?, data_nascimento = ?, uf = ?, id_cidade = ?
+        ${senha ? ', senha = ?' : ''} 
+        WHERE id = ?
+      `;
+      const hashedSenha = senha ? await bcrypt.hash(senha, 10) : undefined;
+      const values = senha
+        ? [nome_completo, email, genero, data_nascimento, uf, id_cidade, hashedSenha, usuario_id]
+        : [nome_completo, email, genero, data_nascimento, uf, id_cidade, usuario_id];
+  
+      console.log(sql, values);
+      await conn.execute(sql, values);
+      console.log('Usuário atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      throw error;
+    } 
   }
+  
 /*async function consultaUsuarioPorId(id) {
     const conn = await connect();
     const sql = "SELECT * FROM usuario WHERE id = ?";
@@ -204,32 +215,31 @@ async function consultaPetsPorUsuario(usuario_id) {
     }
 }*/
 
-async function alterarPet(id_pet, usuario_id, foto, nome, sexo, idade, porte, raca) {
+async function alterarPet(pet_id, nome, sexo, idade, porte, raca, foto) {
     const conn = await connect();
-    const sql = "UPDATE pet SET foto = ?, nome = ?, sexo = ?, idade = ?, porte = ?, raca = ? WHERE id = ?";
-    
-    // Garante que nenhum valor seja undefined
-    const safeValues = [
-        foto !== undefined ? foto : null,             // Pode ser null
-        nome !== undefined ? nome : '',               // Obrigatório, usa vazio como fallback
-        sexo !== undefined ? sexo : '',               // Obrigatório, usa vazio como fallback
-        idade !== undefined ? idade : '',             // Obrigatório, usa vazio como fallback
-        porte !== undefined ? porte : '',             // Obrigatório, usa vazio como fallback
-        raca !== undefined ? raca : null,             // Opcional, usa null
-        id_pet !== undefined ? id_pet : null          // Obrigatório, usado no WHERE
-    ];
-    
     try {
-        await conn.execute(sql, safeValues);
-        console.log('Pet atualizado com sucesso!');
-        return { id: id_pet, usuario_id, foto, nome, sexo, idade, porte, raca }; // Retorna o pet atualizado
+      const sql = `
+        UPDATE pet 
+        SET nome = ?, sexo = ?, idade = ?, porte = ?, raca = ?, foto = ? 
+        WHERE id = ?
+      `;
+      const values = [
+        nome !== undefined ? nome : null,
+        sexo !== undefined ? sexo : null,
+        idade !== undefined ? idade : null,
+        porte !== undefined ? porte : null,
+        raca !== undefined ? raca : null,
+        foto !== undefined ? foto : null,
+        pet_id !== undefined ? pet_id : null,
+      ];
+      console.log(sql, values);
+      await conn.execute(sql, values);
+      console.log('Pet atualizado com sucesso!');
     } catch (error) {
-        console.error('Erro ao atualizar pet:', error);
-        throw error;
-    } finally {
-        await conn.end(); // Fecha a conexão
+      console.error('Erro ao atualizar pet:', error);
+      throw error;
     }
-}
+}    
 
 
 

@@ -5,6 +5,7 @@ function EditarPetModal({ pets, onClose, onSave }) {
   const [modoSelecao, setModoSelecao] = useState(true);
   const [petSelecionado, setPetSelecionado] = useState(null);
   
+  
   // Estados para os campos do pet
   const [idade, setIdade] = useState('');
   const [unidadeIdade, setUnidadeIdade] = useState('anos');
@@ -12,7 +13,8 @@ function EditarPetModal({ pets, onClose, onSave }) {
   const [sexo, setSexo] = useState('');
   const [porte, setPorte] = useState('');
   const [raca, setRaca] = useState('');
-  const [foto, setFoto] = useState(null);
+  const [foto, setFoto] = useState(null); // Novo arquivo de foto
+  const [fotoAtual, setFotoAtual] = useState(''); // Foto antiga do banco
   const [fotoPreview, setFotoPreview] = useState('');
   const [carregando, setCarregando] = useState(false);
 
@@ -36,10 +38,11 @@ function EditarPetModal({ pets, onClose, onSave }) {
       }
       
       if (petSelecionado.foto) {
-        // Adiciona o domínio base ao caminho da foto
-        setFotoPreview(`${BASE_URL}${petSelecionado.foto}`);
+        setFotoAtual(petSelecionado.foto); // Armazena o caminho da foto antiga
+        setFotoPreview(`${BASE_URL}${petSelecionado.foto}`); // Define o preview
       } else {
-        setFotoPreview(''); // Limpa o preview se não houver foto
+        setFotoAtual('');
+        setFotoPreview('');
       }
     }
   }, [petSelecionado]);
@@ -55,7 +58,7 @@ function EditarPetModal({ pets, onClose, onSave }) {
     const file = e.target.files[0];
     if (file) {
       setFoto(file);
-      setFotoPreview(URL.createObjectURL(file)); // Usa URL temporário para preview de nova foto
+      setFotoPreview(URL.createObjectURL(file)); // Preview da nova foto
     }
   };
 
@@ -74,17 +77,24 @@ function EditarPetModal({ pets, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCarregando(true);
+    await new Promise(resolve => setTimeout(resolve, 300)); // Atraso de 100ms para forçar renderização
 
     try {
       const formData = new FormData();
       
       formData.append('pet_id', petSelecionado.id);
-      if (foto) formData.append('fotoPet', foto);
+      //if (foto) formData.append('fotoPet', foto);
       formData.append('nome', nome);
       formData.append('sexo', sexo);
       formData.append('idade', `${idade} ${unidadeIdade}`);
       formData.append('porte', porte);
       formData.append('raca', raca || '');
+
+      if (foto) {
+        formData.append('fotoPet', foto); // Nova foto (pode ser um arquivo ou string)
+      } else {
+        formData.append('fotoAtual', fotoAtual); // Foto atual
+      }
 
       const response = await fetch('/api/alterarpet', {
         method: 'POST',
@@ -96,16 +106,27 @@ function EditarPetModal({ pets, onClose, onSave }) {
       }
 
       const data = await response.json();
-      onSave(data);
-      onClose();
+      // Cria o objeto atualizado do pet com base nos valores enviados e resposta do backend
+      const updatedPet = {
+        id: petSelecionado.id,
+        nome,
+        sexo,
+        idade: `${idade} ${unidadeIdade}`,
+        porte,
+        raca: raca || null,
+        foto: data.pet.foto, // Usa o caminho retornado pelo backend
+      };
+
+      // Chama onSave com o pet atualizado
+      onSave(updatedPet);
+      onClose(); // Fecha o modal após o sucesso
     } catch (error) {
       console.error('Erro ao atualizar pet:', error);
-      alert('Erro ao atualizar pet. Tente novamente.');
+      alert(`Erro ao atualizar pet: ${error.message}`);
     } finally {
       setCarregando(false);
     }
-  };
-
+};
   return (
     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <div className="bg-red-400 text-white p-4 rounded-t-lg flex justify-between items-center">
@@ -198,8 +219,12 @@ function EditarPetModal({ pets, onClose, onSave }) {
                     file:bg-red-50 file:text-red-600
                     hover:file:bg-red-100"
                 />
-              </div>
-            </div>
+             </div>
+              {/* Exibir o nome da foto atual, se existir */}
+              {fotoAtual && !foto && (
+                <p className="text-sm text-gray-600 mt-2">Foto atual: {fotoAtual}</p>
+              )}
+             </div>
 
             {/* Nome */}
             <div className="mb-4">

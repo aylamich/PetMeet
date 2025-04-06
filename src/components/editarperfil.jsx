@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import logo from '/logo.png'; // Importação da logo
 
-function EditarPerfil({ onClose }) {
+function EditarPerfil({ onClose, onSave }) {
   // Declarações de estados para os campos do formulário
   const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
   const [emailErro, setEmailErro] = useState(''); // Inicializa o estado emailErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
@@ -195,10 +195,20 @@ function EditarPerfil({ onClose }) {
         throw new Error('Erro ao atualizar usuário');
       }
 
-      const data = await response.text();
+      const data = await response.json();
       console.log('Resposta do servidor:', data);
 
       localStorage.setItem('usuarioNome', dadosUsuarioAtualizados.nome_completo);
+      // Chama onSave com os dados atualizados
+      onSave({
+        nome_completo: dadosUsuarioAtualizados.nome_completo,
+        email: dadosUsuarioAtualizados.email,
+        genero: dadosUsuarioAtualizados.genero,
+        data_nascimento: dadosUsuarioAtualizados.data_nascimento,
+        uf: dadosUsuarioAtualizados.uf,
+        id_cidade: dadosUsuarioAtualizados.id_cidade,
+        cidade_nome: cidades.find(c => c.id === dadosUsuarioAtualizados.id_cidade)?.nomeCidade || dadosUsuario.cidade_nome,
+      });
 
       setTimeout(() => {
         setCarregando(false);
