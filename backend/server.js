@@ -172,15 +172,17 @@ app.get('/api/consultausuario', async (req, res) => {
   }
 });
 
-  app.post('/api/alterarusuario', (req, res) => {
-    const {usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha} = req.body;
-    
-    db.alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha);
-    console.log(id_cidade);
-    
-    res.send(`Nome: ${nome}`);
+app.post('/api/alterarusuario', async (req, res) => {
+  const { usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade } = req.body;
 
-  });
+  try {
+    await db.alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade);
+    res.send('Usuário atualizado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
+    res.status(500).send('Erro ao atualizar usuário');
+  }
+});
 
   app.post('/api/editarusuario', async (req, res) =>  {  
     const {id} = req.body;
@@ -271,21 +273,35 @@ app.get('/api/consultapets', async (req, res) => {
   }
 });
 
-app.post('/api/alterarpet', (req, res) => {
-  const {pet_id, usuario_id, foto, nome, sexo, idade, porte, raca} = req.body;
-  
-  db.alterarPet(pet_id, usuario_id, foto, nome, sexo, idade, porte, raca);
-  
-  res.send(`Nome: ${nome}`);
+app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
+  try {
+    // Extrai os campos do FormData
+    const pet_id = req.body.pet_id;
+    const usuario_id = req.body.usuario_id || null; // Pode ser null se não enviado
+    const nome = req.body.nome;
+    const sexo = req.body.sexo;
+    const idade = req.body.idade;
+    const porte = req.body.porte;
+    const raca = req.body.raca !== undefined ? req.body.raca : null; // Converte undefined em null
+    const foto = req.file ? `/uploads/${req.file.filename}` : req.body.foto; // Usa a nova foto ou a existente
+
+    // Chama a função alterarPet
+    await db.alterarPet(pet_id, usuario_id, foto, nome, sexo, idade, porte, raca);
+
+    res.json({ message: 'Pet atualizado com sucesso', nome });
+  } catch (error) {
+    console.error('Erro na rota /api/alterarpet:', error);
+    res.status(500).json({ error: 'Erro ao atualizar pet' });
+  }
 });
 
-app.post('/api/editarpet', async (req, res) =>  {
+/*app.post('/api/editarpet', async (req, res) =>  {
   const {id} = req.body;
 
   let resultado = await db.consultaPetPorId(id); 
   //console.log(resultado);
   res.send(resultado);
-});
+});*/
 
 
 app.post('/api/criarevento', (req, res) => {  

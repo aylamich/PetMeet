@@ -119,14 +119,15 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
 async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade) {
     const conn = await connect();
     const sql = "UPDATE usuario SET nome_completo = ?, email = ?, genero = ?, data_nascimento = ?, uf = ?, id_cidade = ? WHERE id = ?";
-    
-    const values = [usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade];
+    const values = [nome_completo, email, genero, data_nascimento, uf, id_cidade, usuario_id];
     console.log(sql, values);
     await conn.execute(sql, values)
-        .then(() => console.log('Usuário atualizado com sucesso!'))
-        .catch(error => console.error('Erro ao atualizar usuário:', error))
-}
-
+      .then(() => console.log('Usuário atualizado com sucesso!'))
+      .catch(error => {
+        console.error('Erro ao atualizar usuário:', error);
+        throw error;
+      });
+  }
 /*async function consultaUsuarioPorId(id) {
     const conn = await connect();
     const sql = "SELECT * FROM usuario WHERE id = ?";
@@ -205,17 +206,29 @@ async function consultaPetsPorUsuario(usuario_id) {
 
 async function alterarPet(id_pet, usuario_id, foto, nome, sexo, idade, porte, raca) {
     const conn = await connect();
-    const sql = "UPDATE pet SET usuario_id = ?, foto = ?, nome = ?, sexo = ?, idade = ?, porte = ?, raca = ? WHERE id = ?";
+    const sql = "UPDATE pet SET foto = ?, nome = ?, sexo = ?, idade = ?, porte = ?, raca = ? WHERE id = ?";
     
-   
-    const values = [usuario_id, foto, nome, sexo, idade, porte, raca, id_pet];
+    // Garante que nenhum valor seja undefined
+    const safeValues = [
+        foto !== undefined ? foto : null,             // Pode ser null
+        nome !== undefined ? nome : '',               // Obrigatório, usa vazio como fallback
+        sexo !== undefined ? sexo : '',               // Obrigatório, usa vazio como fallback
+        idade !== undefined ? idade : '',             // Obrigatório, usa vazio como fallback
+        porte !== undefined ? porte : '',             // Obrigatório, usa vazio como fallback
+        raca !== undefined ? raca : null,             // Opcional, usa null
+        id_pet !== undefined ? id_pet : null          // Obrigatório, usado no WHERE
+    ];
     
-    await conn.execute(sql, values)
-        .then(() => console.log('Pet atualizado com sucesso!'))
-        .catch(error => {
-            console.error('Erro ao atualizar pet:', error);
-            throw error; 
-        })
+    try {
+        await conn.execute(sql, safeValues);
+        console.log('Pet atualizado com sucesso!');
+        return { id: id_pet, usuario_id, foto, nome, sexo, idade, porte, raca }; // Retorna o pet atualizado
+    } catch (error) {
+        console.error('Erro ao atualizar pet:', error);
+        throw error;
+    } finally {
+        await conn.end(); // Fecha a conexão
+    }
 }
 
 

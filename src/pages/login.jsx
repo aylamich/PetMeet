@@ -1,7 +1,46 @@
 import React from 'react';
 import logo from '/logo.png'; // Importação da logo
+import { useState } from 'react';
 
 function Login() {
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: email,
+          senha: password // Transforma 'password' em 'senha' aqui
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Salva o token ou dados do usuário no localStorage
+        localStorage.setItem('usuario_id', data.usuario_id);
+        localStorage.setItem('email', email);
+        localStorage.setItem('usuarioNome', data.nome)
+        
+        // Redireciona para a página de eventos
+        window.location.href = '/eventosinscritos';
+      } else {
+        alert(data.error || 'Erro ao fazer login. Email ou senha inválidos.');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro ao conectar com o servidor');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Logo */}
@@ -16,13 +55,15 @@ function Login() {
           <h2 className="text-2xl font-bold mb-6 text-gray-800">Login</h2>
 
           {/* Formulário */}
-          <form>
+          <form  onSubmit={handleSubmit}>
             {/* Campo de Email */}
             <div className="mb-4">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700"> {/* htmlFor é equivalente ao for do HTML */}
                 Email
               </label>
               <input type="email" id="email" name="email" placeholder="Digite seu email" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required/>
             </div>
 
@@ -32,7 +73,9 @@ function Login() {
                 Senha
               </label>
               <input type="password" id="password" name="password" placeholder="Digite sua senha" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-              required/>
+               value={password}
+               onChange={(e) => setPassword(e.target.value)}
+               required/>
             </div>
 
             {/* Botão de Entrar */}

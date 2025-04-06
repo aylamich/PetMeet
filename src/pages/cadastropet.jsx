@@ -5,6 +5,11 @@ function CadastroPet() {
   const [idade, setIdade] = useState(''); // Idade do pet, inicia vazia
   const [unidadeIdade, setUnidadeIdade] = useState('anos'); // Valor padrão: Anos
   const [mostrarModalSucesso, setMostrarModalSucesso] = useState(false); // Modal de Sucesso: Oculto, só mostra quando bem sucedido
+  const [nome, setNome] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [porte, setPorte] = useState('');
+  const [raca, setRaca] = useState('');
+  const [foto, setFoto] = useState(null);
 
   // Atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
   const handleIdadeChange = (event) => {
@@ -14,16 +19,67 @@ function CadastroPet() {
     } 
   };
 
-  const handleUnidadeIdadeChange = (event) => {
+  const handleUnidadeIdadeChange = async (event) => {
     setUnidadeIdade(event.target.value); //Para atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
   };
 
-  const handleAdicionarOutroPet = () => {
+  /*const handleAdicionarOutroPet = () => {
     window.location.reload(); // Recarrega a página para cadastrar novo pet
-  };
+  }*/
+
+    const limparFormulario = () => {
+      setIdade('');
+      setUnidadeIdade('anos');
+      setNome('');
+      setSexo('');
+      setPorte('');
+      setRaca('');
+      setFoto(null);
+      document.getElementById('fotoPet').value = '';
+    };
+  
+    const salvarPet = (redirecionar) => {
+      if (!nome || !sexo || !idade || !porte || !foto) {
+        alert('Preencha todos os campos obrigatórios.');
+        return;
+      }
+  
+      const formData = new FormData();
+      formData.append('usuario_id', localStorage.getItem('usuario_id') || '1');
+      formData.append('fotoPet', foto);
+      formData.append('nome', nome);
+      formData.append('sexo', sexo);
+      formData.append('idade', `${idade} ${unidadeIdade}`);
+      formData.append('porte', porte);
+      formData.append('raca', raca || '');
+  
+      fetch('/api/cadastropet', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => {
+          if (!response.ok) throw new Error('Erro ao cadastrar pet');
+          return response.json();
+        })
+        .then(data => {
+          if (redirecionar) {
+            setMostrarModalSucesso(true);
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 3000);
+          } else {
+            alert('Pet adicionado com sucesso!');
+            limparFormulario();
+          }
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+          alert('Deu ruim, tenta de novo.');
+        });
+    }; 
 
   // Validar formulário ao enviar
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();  // Evite que a página seja recarregada ao enviar o formulário, para processar dados de formulários sem recarregar a página
 
     // Validar idade (deve ter exatamente 1 ou 2 números)
@@ -38,11 +94,42 @@ function CadastroPet() {
       return;
     }
 
-    // Se tudo estiver válido, mostra o modal de sucesso
-    setMostrarModalSucesso(true);
-    setTimeout(() => {
-      window.location.href = '/login'; // Redireciona para a tela de login
-    }, 3000); // 3 segundos de espera
+    try {
+      const formData = new FormData();
+      
+      // Adiciona a foto (importante que seja o primeiro append)
+      if (event.target.fotoPet.files[0]) {
+        formData.append('fotoPet', event.target.fotoPet.files[0]);
+      }
+  
+      // Adiciona os demais campos como strings
+      formData.append('usuario_id', localStorage.getItem('usuario_id'));
+      formData.append('nome', event.target.nomePet.value);
+      formData.append('sexo', event.target.generoPet.value);
+      formData.append('idade', `${idade} ${unidadeIdade}`);
+      formData.append('porte', event.target.portePet.value);
+      formData.append('raca', event.target.racaPet.value || '');
+  
+      const response = await fetch('/api/cadastropet', {
+        method: 'POST',
+        body: formData  // Envia apenas o FormData
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao cadastrar pet');
+      }
+  
+      const data = await response.json();
+      setMostrarModalSucesso(true);
+      
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 3000);
+    } catch (error) {
+      console.error('Erro na requisição:', error);
+      alert('Erro ao cadastrar pet. Tente novamente.');
+    }
   };
 
   return (
@@ -66,6 +153,7 @@ function CadastroPet() {
                 Foto do Pet<span className="text-red-500">*</span>
               </label>
               <input type="file" id="fotoPet" name="fotoPet" accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
+                onChange={(e) => setFoto(e.target.files[0])}
                 required/>
             </div>
 
@@ -74,7 +162,9 @@ function CadastroPet() {
               <label htmlFor="nomePet" className="block text-sm font-medium text-gray-700">
                 Nome<span className="text-red-500">*</span>
               </label>
-              <input type="text" id="nomePet" name="nomePet" placeholder="Digite o nome do seu cãozinho" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
+              <input type="text" id="nomePet" name="nomePet" placeholder="Digite o nome do seu cãozinho" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                value={nome} 
+                onChange={(e) => setNome(e.target.value)}
                 required/>
             </div>
 
@@ -84,6 +174,8 @@ function CadastroPet() {
                 Gênero<span className="text-red-500">*</span>
               </label>
               <select id="generoPet" name="generoPet" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              value={sexo}
+                onChange={(e) => setSexo(e.target.value)}
                 required>
                 <option value="" disabled selected>
                   Selecione o gênero
@@ -126,6 +218,8 @@ function CadastroPet() {
                 Porte<span className="text-red-500">*</span>
               </label>
               <select id="portePet" name="portePet" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                value={porte}
+                onChange={(e) => setPorte(e.target.value)}
                 required>
 
                 <option value="" disabled selected>
@@ -142,13 +236,16 @@ function CadastroPet() {
               <label htmlFor="racaPet" className="block text-sm font-medium text-gray-700">
                 Raça
               </label>
-              <input type="text" id="racaPet" name="racaPet" placeholder="Ex: Labrador, Golden Retriever, SRD" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+              <input type="text" id="racaPet" name="racaPet" placeholder="Ex: Labrador, Golden Retriever, SRD" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              value={raca}
+              onChange={(e) => setRaca(e.target.value)}
+              />
             </div>
 
             {/* Botão de Adicionar outro pet */}
             <button
               type="button"
-              onClick={handleAdicionarOutroPet}
+              onClick={() => salvarPet(false)}
               className="w-full bg-red-400 text-white py-2 px-4 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
             >
               Adicionar mais um pet

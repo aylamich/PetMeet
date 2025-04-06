@@ -112,69 +112,12 @@ function Cadastro() {
   };
 
 
-  const handleSubmit = (event) => { // Função para enviar o formulário
-    event.preventDefault(); // Evite que a página seja recarregada ao enviar o formulário, para processar dados de formulários sem recarregar a página
-
-    // Limpar mensagens de erro anteriores
-    setSenhaErro('');
-    setDataNascimentoErro(''); 
-    setEmailErro('');
-
-    // Validar data de nascimento
-    const dataNascimento = event.target.dataNascimento.value;
-    if (!validarDataNascimento(dataNascimento)) {
-      return; // Impede o envio do formulário se a data for inválida
-    }
-
-     // Validar senha
-    const senha = event.target.senha.value;
-    if (!validarSenha(senha)) {
-      return; // Impede o envio do formulário se a senha for inválida
-    }
-
-    const email = event.target.email.value;
-    if (!validarEmail(email)) {
-      return; // Impede o envio do formulário se o email for inválido
-    }
-
-    // Ativar o spinner
-    setCarregando(true);
-    // Se tudo estiver válido, redireciona para o usuário realizar o cadastro do pet
-    setTimeout(() => {
-      window.location.href = '/cadastropet'; // Redireciona para a tela de cadastro de pet
-    }, 3000); // 3 segundos de espera
-  };
-
 // ---------------------------------------------------- //-------------------------------------------------- //
 // Script 
-
+// Campo cidade e estado
 const [ufSelecionado, setUfSelecionado] = useState('');
 const [cidades, setCidades] = useState([]);
 const [cidadeSelecionada, setCidadeSelecionada] = useState('');
-
-/*
-      const carregarCidadesPorUF = async (ufSelecionado) => {
-        console.log("carregamento de cidades para UF:", ufSelecionado);
-        try {
-          const response = await fetch('/api/consultacidadeporUF', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ufSelecionado })
-          });
-          
-          console.log("Resposta da API recebida. Status:", response.status);
-          
-          
-          const data = await response.json();
-          console.log("Dados recebidos da API:", data);
-          setCidades(data);
-          setCidadeSelecionada('');
-        } catch (error) {
-          console.error('Erro ao carregar cidades:', error);
-        }
-      };
-      */
-
 
       const carregarCidadesPorUF = async (ufSelecionado) => {
         console.log("carregamento de cidades para UF:", ufSelecionado);
@@ -210,6 +153,79 @@ const [cidadeSelecionada, setCidadeSelecionada] = useState('');
         };
 
 
+// ---------------------------------------------------- //-------------------------------------------------- //
+// Função para enviar o formulário        
+      const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        // Limpar mensagens de erro anteriores
+        setSenhaErro('');
+        setDataNascimentoErro('');
+        setEmailErro('');
+
+        // Pegar os valores do formulário
+        const formData = new FormData(event.target);
+        const dadosUsuario = {
+          nome_completo: formData.get('nome_completo'),
+          email: formData.get('email'),
+          genero: formData.get('genero'),
+          data_nascimento: formData.get('data_nascimento'),
+          uf: formData.get('uf'),
+          id_cidade: formData.get('cbcidade'), // Note que o name no HTML é "cbcidade"
+          senha: formData.get('senha')
+        };
+
+        // Validar os campos
+        if (!validarDataNascimento(dadosUsuario.data_nascimento)) {
+          return;
+        }
+
+        if (!validarSenha(dadosUsuario.senha)) {
+          return;
+        }
+
+        if (!validarEmail(dadosUsuario.email)) {
+          return;
+        }
+
+        // Ativar o spinner
+        setCarregando(true);
+
+        try {
+          // Fazer a requisição POST para o backend
+          const response = await fetch('/api/cadastrousuario', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dadosUsuario)
+          });
+
+          if (!response.ok) {
+            throw new Error('Erro ao cadastrar usuário');
+          }
+
+          //const data = await response.text();
+          const data = await response.json(); // Pega a resposta do servidor em JSON
+          console.log('Resposta do servidor:', data);
+
+          localStorage.setItem('usuario_id', data.usuario_id);
+          localStorage.setItem('usuarioNome', dadosUsuario.nome_completo);
+
+          // Se sucesso, redirecionar
+          setTimeout(() => {
+            window.location.href = '/cadastropet';
+          }, 2000); // 2 segundos de espera
+
+        } catch (error) {
+          console.error('Erro na requisição:', error);
+          setCarregando(false);
+          setEmailErro(error.message);
+          // Aqui você pode adicionar uma mensagem de erro para o usuário
+          setEmailErro('Erro ao cadastrar. Tente novamente.');
+        }
+      };
+// ---------------------------------------------------- //-------------------------------------------------- //
   return (
     <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Imagem */}
@@ -329,7 +345,7 @@ const [cidadeSelecionada, setCidadeSelecionada] = useState('');
                   value={cidadeSelecionada}
                   onChange={handleCidadeChange}
                   disabled={!ufSelecionado}
-                required 
+                  required 
                 >
               <option value="">
               {cidades.length === 0 && ufSelecionado 
