@@ -7,6 +7,7 @@ const Menu = () => {
   const [showConfUsuario, setShowConfUsuario] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false); // Estado para o modal de edição
+  const [showAddPetModal, setShowAddPetModal] = useState(false);
   const [usuario, setUsuario] = useState("Usuário");
   const [dadosUsuario, setDadosUsuario] = useState(null);
   const [dadosPets, setDadosPets] = useState(null);
@@ -74,8 +75,43 @@ const Menu = () => {
     setUsuario(updatedUsuario.nome_completo || usuario); // Atualiza o nome exibido no menu
   };
 
+  /*const handleSavePet = (petAtualizado) => {
+    if (dadosPets && dadosPets.some(p => p.id === petAtualizado.id)) {
+      // Atualiza um pet existente
+      setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
+    } else {
+      // Adiciona um novo pet
+      setDadosPets(prevPets => (prevPets ? [...prevPets, petAtualizado] : [petAtualizado]));
+    }
+    setShowEditPetModal(false);
+    setShowAddPetModal(false);
+  };*/
+
   const handleSavePet = (petAtualizado) => {
-    setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
+    setDadosPets((prevPets) => {
+      if (!prevPets) return [petAtualizado]; // Caso inicial, quando prevPets é null
+      const exists = prevPets.find(p => p.id === petAtualizado.id);
+      if (exists) {
+        // Atualiza um pet existente
+        return prevPets.map(p => (p.id === petAtualizado.id ? petAtualizado : p));
+      }
+      // Adiciona um novo pet
+      return [...prevPets, petAtualizado];
+    });
+    // Fecha os modais após salvar
+    setShowEditPetModal(false);
+    setShowAddPetModal(false);
+  };
+
+  /*const handleDeletePet = (petId) => {
+    setDadosPets(dadosPets.filter(p => p.id !== petId));
+  };*/
+
+  const handleDeletePet = (petId) => {
+    setDadosPets((prevPets) => {
+      if (!prevPets) return null; // Evita erro se prevPets for null
+      return prevPets.filter(p => p.id !== petId);
+    });
   };
 
   const exibeConfUsuario = () => {
@@ -95,9 +131,14 @@ const Menu = () => {
   setShowEditProfileModal(false);
   };
 
-  const openEditPetModal = (pet) => {
+  const openEditPetModal = (pet = null) => {
     setPetSelecionado(pet);
     setShowEditPetModal(true);
+  };
+
+  const openAddPetModal = () => {
+    setPetSelecionado(null); // Reseta o pet selecionado no componente pai
+    setShowAddPetModal(true);
   };
 
   return (
@@ -174,9 +215,12 @@ const Menu = () => {
             <button onClick={openEditProfileModal} className="p-4 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition-colors w-full">
            <h3 className="font-medium text-red-700">Editar Perfil</h3>
             </button>
-            <button onClick={openEditPetModal}  className="p-4 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition-colors w-full">
+            <button onClick={() => openEditPetModal(null)}  className="p-4 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition-colors w-full">
               <h3 className="text-center font-medium text-red-700">Editar Perfil Pet</h3>
             </button >
+            <button onClick={openAddPetModal} className="p-4 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition-colors w-full">
+              <h3 className="font-medium text-red-700">Adicionar Pet</h3>
+            </button>
             <button 
               onClick={handleLogout}
               className="w-full mt-8 p-3 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors flex items-center justify-center gap-2"
@@ -249,7 +293,7 @@ const Menu = () => {
                   <div key={index} className="flex flex-col md:flex-row gap-6 items-start mb-6">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-red-200 shadow-md bg-gray-100 flex items-center justify-center">
                       {pet.foto ? (
-                        <img src={`http://localhost:3000${pet.foto}`}  alt={`Foto de ${pet.nome}`} className="w-full h-full object-cover" />
+                        <img src={`http://localhost:3000${pet.foto}`} alt={`Foto de ${pet.nome}`} className="w-full h-full object-cover" />
                       ) : (
                         <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
@@ -306,19 +350,33 @@ const Menu = () => {
           </div>
         </div>
 
-        {/* Modal de Edição de Pet */}
-        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showEditPetModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <div className={`transform transition-all duration-300 w-full max-w-3xl ${showEditPetModal ? 'scale-100' : 'scale-95'}`}>
-            <EditarPetModal
-              pets={dadosPets} // Passa a lista de pets
-              onClose={() => setShowEditPetModal(false)}
-              //onSave={(petAtualizado) => {
-                //setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
-              //}}
-              onSave={handleSavePet}
-            />
-          </div>
+      {/* Modal de Edição de Pet */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showEditPetModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`transform transition-all duration-300 w-full max-w-3xl ${showEditPetModal ? 'scale-100' : 'scale-95'}`}>
+          <EditarPetModal
+            pets={dadosPets}
+            onClose={() => setShowEditPetModal(false)}
+            onSave={handleSavePet}
+            onDelete={handleDeletePet}
+            petInicial={petSelecionado} // Passa o pet selecionado, se houver
+            modoInicial="selecao"
+          />
         </div>
+      </div>
+
+       {/* Modal de Cadastro de Pet */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showAddPetModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`transform transition-all duration-300 w-full max-w-3xl ${showAddPetModal ? 'scale-100' : 'scale-95'}`}>
+          <EditarPetModal
+            pets={dadosPets}
+            onClose={() => setShowAddPetModal(false)}
+            onSave={handleSavePet}
+            onDelete={handleDeletePet}
+            modoInicial="cadastro" // Força o modo de cadastro
+          />
+        </div>
+      </div>
+
     </>
   );
 };

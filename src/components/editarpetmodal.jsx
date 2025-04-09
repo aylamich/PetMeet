@@ -1,34 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-function EditarPetModal({ pets, onClose, onSave }) {
-  // Estados para o fluxo de edição
-  const [modoSelecao, setModoSelecao] = useState(true);
+function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'selecao' }) {
+  const [modoSelecao, setModoSelecao] = useState(modoInicial === 'edicao');
   const [petSelecionado, setPetSelecionado] = useState(null);
-  
-  
-  // Estados para os campos do pet
+  const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [petToDelete, setPetToDelete] = useState(null);
+
   const [idade, setIdade] = useState('');
   const [unidadeIdade, setUnidadeIdade] = useState('anos');
   const [nome, setNome] = useState('');
   const [sexo, setSexo] = useState('');
   const [porte, setPorte] = useState('');
   const [raca, setRaca] = useState('');
-  const [foto, setFoto] = useState(null); // Novo arquivo de foto
-  const [fotoAtual, setFotoAtual] = useState(''); // Foto antiga do banco
+  const [foto, setFoto] = useState(null);
+  const [fotoAtual, setFotoAtual] = useState('');
   const [fotoPreview, setFotoPreview] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  // URL base para as imagens (ajuste conforme o domínio da sua API)
-  const BASE_URL = 'http://localhost:3000';
+  const fileInputRef = useRef(null); // Adicione esta linha
 
-  // Preencher os campos quando um pet é selecionado
+  const BASE_URL = 'http://localhost:3000';
+  
   useEffect(() => {
-    if (petSelecionado) {
+    // Executa toda vez que o modal é aberto ou modoInicial muda
+    if (modoInicial === 'cadastro') {
+      setModoCadastro(true);
+      setModoSelecao(false);
+      setPetSelecionado(null);
+      setNome('');
+      setSexo('');
+      setIdade('');
+      setUnidadeIdade('anos');
+      setPorte('');
+      setRaca('');
+      setFoto(null);
+      setFotoAtual(''); // Já está aqui, mas confirmando
+      setFotoAtual('');
+      setFotoPreview('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Limpa o valor do input
+      }
+    } else if (modoInicial === 'selecao') {
+      setModoCadastro(false);
+      setModoSelecao(true);
+      setPetSelecionado(null);
+      setNome('');
+      setSexo('');
+      setIdade('');
+      setUnidadeIdade('anos');
+      setPorte('');
+      setRaca('');
+      setFoto(null);
+      setFotoAtual(''); // Já está aqui, mas confirmando
+      setFotoAtual('');
+      setFotoPreview('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Limpa o valor do input
+      }
+    }
+  }, [modoInicial, onClose]); // Adiciona onClose como dependência para detectar reabertura
+
+  useEffect(() => {
+    if (petSelecionado && !modoCadastro) {
       setNome(petSelecionado.nome || '');
       setSexo(petSelecionado.sexo || '');
       setPorte(petSelecionado.porte || '');
       setRaca(petSelecionado.raca || '');
-      
       if (petSelecionado.idade) {
         const idadeParts = petSelecionado.idade.split(' ');
         if (idadeParts.length === 2) {
@@ -36,16 +74,25 @@ function EditarPetModal({ pets, onClose, onSave }) {
           setUnidadeIdade(idadeParts[1]);
         }
       }
-      
       if (petSelecionado.foto) {
-        setFotoAtual(petSelecionado.foto); // Armazena o caminho da foto antiga
-        setFotoPreview(`${BASE_URL}${petSelecionado.foto}`); // Define o preview
+        setFotoAtual(petSelecionado.foto);
+        setFotoPreview(`${BASE_URL}${petSelecionado.foto}`);
       } else {
         setFotoAtual('');
         setFotoPreview('');
       }
+    } else if (modoCadastro) {
+      setNome('');
+      setSexo('');
+      setPorte('');
+      setRaca('');
+      setIdade('');
+      setUnidadeIdade('anos');
+      setFoto(null);
+      setFotoAtual('');
+      setFotoPreview('');
     }
-  }, [petSelecionado]);
+  }, [petSelecionado, modoCadastro]);
 
   const handleIdadeChange = (event) => {
     const valor = event.target.value.replace(/\D/g, '');
@@ -58,80 +105,164 @@ function EditarPetModal({ pets, onClose, onSave }) {
     const file = e.target.files[0];
     if (file) {
       setFoto(file);
-      setFotoPreview(URL.createObjectURL(file)); // Preview da nova foto
+      setFotoPreview(URL.createObjectURL(file));
     }
   };
 
   const handleSelecionarPet = (pet) => {
     setPetSelecionado(pet);
     setModoSelecao(false);
+    setModoCadastro(false);
   };
 
   const handleVoltarParaSelecao = () => {
     setModoSelecao(true);
     setPetSelecionado(null);
-    setFoto(null); // Reseta a foto ao voltar
-    setFotoPreview(''); // Reseta o preview
+    setModoCadastro(false);
+    setFoto(null);
+    setFotoPreview('');
+  };
+
+  const handleNovoPet = () => {
+    setModoSelecao(false);
+    setModoCadastro(true);
+    setPetSelecionado(null);
+  };
+
+  const handleDeletePet = (pet) => {
+    console.log('Pet para exclusão:', pet); // Verifique se o pet tem ID
+    setPetToDelete(pet);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePet = async () => {
+    setCarregando(true);
+   // setTimeout(async () => {
+    try {
+      console.log('Tentando excluir pet com ID:', petToDelete.id); // Log para depuração
+      const response = await fetch(`/api/deletarpet?pet_id=${petToDelete.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro retornado pela API:', errorData); // Log do erro da API
+        throw new Error(errorData.error || 'Erro ao excluir pet');
+      }
+  
+      // Se a exclusão for bem-sucedida, notifica o componente pai
+      onDelete(petToDelete.id);
+      setShowDeleteConfirm(false);
+      setPetToDelete(null);
+      setModoSelecao(true); // Volta para seleção após exclusão
+    } catch (error) {
+      console.error('Erro ao excluir pet:', error);
+      alert(`Erro ao excluir pet: ${error.message}`);
+    } finally {
+      setCarregando(false);
+    }
+ // }, 1000); // <- atraso de 800ms
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCarregando(true);
-    await new Promise(resolve => setTimeout(resolve, 300)); // Atraso de 100ms para forçar renderização
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const idadeFormatada = idade === '1' ? `${idade} ${unidadeIdade.replace(/s$/, '')}` : `${idade} ${unidadeIdade}`;
 
     try {
       const formData = new FormData();
-      
-      formData.append('pet_id', petSelecionado.id);
-      //if (foto) formData.append('fotoPet', foto);
       formData.append('nome', nome);
       formData.append('sexo', sexo);
-      formData.append('idade', `${idade} ${unidadeIdade}`);
+     // formData.append('idade', `${idade} ${unidadeIdade}`);
+      formData.append('idade', idadeFormatada);
       formData.append('porte', porte);
       formData.append('raca', raca || '');
-
       if (foto) {
-        formData.append('fotoPet', foto); // Nova foto (pode ser um arquivo ou string)
-      } else {
-        formData.append('fotoAtual', fotoAtual); // Foto atual
+        formData.append('fotoPet', foto);
       }
 
-      const response = await fetch('/api/alterarpet', {
+      let url = '';
+      let updatedPet = {};
+
+      if (modoCadastro) {
+        formData.append('usuario_id', localStorage.getItem('usuario_id'));
+        url = '/api/cadastropet';
+      } else {
+        formData.append('pet_id', petSelecionado.id);
+        if (!foto) formData.append('fotoAtual', fotoAtual);
+        url = '/api/alterarpet';
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao atualizar pet');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao processar pet');
       }
 
       const data = await response.json();
-      // Cria o objeto atualizado do pet com base nos valores enviados e resposta do backend
-      const updatedPet = {
-        id: petSelecionado.id,
-        nome,
-        sexo,
-        idade: `${idade} ${unidadeIdade}`,
-        porte,
-        raca: raca || null,
-        foto: data.pet.foto, // Usa o caminho retornado pelo backend
-      };
+      console.log('Resposta da API de cadastro:', data); // Log para verificar o que o backend retorna
 
-      // Chama onSave com o pet atualizado
+        if (modoCadastro) {
+          updatedPet = {
+            id: data.petId,
+            nome,
+            sexo,
+            idade: idadeFormatada,
+            porte,
+            raca: raca || null,
+            foto: data.foto || null, // Mantém o caminho relativo (ex.: "/uploads/...")
+          };
+          console.log('updatedPet após cadastro:', updatedPet); // Verifica se o id está presente
+          setFotoPreview(data.foto ? `${BASE_URL}${data.foto}` : ''); // Preview com BASE_URL para o modal
+          setFotoAtual(''); // Limpa fotoAtual após cadastrar
+          setFoto(null); // Limpa o estado da foto
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''; // Limpa o valor do input
+          }
+          //setPetSelecionado(updatedPet); // Mantém o pet no estado
+          //setModoCadastro(false); // Sai do modo de cadastro
+          //setModoSelecao(false);
+        } else {
+          updatedPet = {
+            id: petSelecionado.id,
+            nome,
+            sexo,
+            idade: idadeFormatada,
+            porte,
+            raca: raca || null,
+            foto: data.pet.foto || fotoAtual, // Mantém o caminho relativo
+          };
+          setModoSelecao(true); // Volta para seleção no modo de edição
+        }
+
+      console.log('Pet processado:', updatedPet);
       onSave(updatedPet);
-      onClose(); // Fecha o modal após o sucesso
+      onClose();
+
+        // Limpa o estado após salvar
+     // setPetSelecionado(null);
+      //setModoSelecao(true); // Volta para o modo de seleção
+      //setModoCadastro(false);
+      //onClose();
     } catch (error) {
-      console.error('Erro ao atualizar pet:', error);
-      alert(`Erro ao atualizar pet: ${error.message}`);
+      console.error('Erro ao processar pet:', error);
+      alert(`Erro ao processar pet: ${error.message}`);
     } finally {
       setCarregando(false);
     }
-};
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <div className="bg-red-400 text-white p-4 rounded-t-lg flex justify-between items-center">
         <h3 className="text-xl font-bold">
-          {modoSelecao ? 'Selecionar Pet para Editar' : 'Editar Pet'}
+          {modoSelecao ? 'Selecionar Pet para Editar' : modoCadastro ? 'Cadastrar Novo Pet' : 'Editar Pet'}
         </h3>
         <button onClick={onClose} className="text-white hover:text-red-100">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,40 +272,69 @@ function EditarPetModal({ pets, onClose, onSave }) {
       </div>
 
       <div className="p-6">
-        {modoSelecao ? (
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium text-gray-800">Selecione o pet que deseja editar:</h4>
-            
-            {pets && pets.length > 0 ? (
-              <div className="space-y-3">
-                {pets.map(pet => (
-                  <div 
-                    key={pet.id} 
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition-colors"
-                    onClick={() => handleSelecionarPet(pet)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-200 bg-gray-100 flex items-center justify-center">
-                        {pet.foto ? (
-                          <img 
-                            src={`${BASE_URL}${pet.foto}`} // Adiciona o domínio base
-                            alt={pet.nome} 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => console.log(`Erro ao carregar imagem de ${pet.nome}: ${e.target.src}`)} // Log para depuração
-                          />
-                        ) : (
-                          <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
-                          </svg>
-                        )}
+      {modoSelecao ? (
+            <div className="space-y-4">
+              <h4 className="text-lg font-medium text-gray-800">Selecione o pet que deseja editar:</h4>
+              {pets && pets.length > 0 ? (
+                <div className="space-y-3">
+                  {pets.map(pet => (
+                    <div
+                      key={pet.id}
+                      className="p-4 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-between"
+                    >
+                      <div
+                        className="flex items-center gap-4 cursor-pointer"
+                        onClick={() => handleSelecionarPet(pet)}
+                      >
+                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-200 bg-gray-100 flex items-center justify-center">
+                          {pet.foto ? (
+                            <img
+                              src={`${BASE_URL}${pet.foto}`}
+                              alt={pet.nome}
+                              className="w-full h-full object-cover"
+                              onError={(e) => console.log(`Erro ao carregar imagem de ${pet.nome}: ${e.target.src}`)}
+                            />
+                          ) : (
+                            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <h5 className="font-medium">{pet.nome}</h5>
+                          <p className="text-sm text-gray-600">{pet.porte} • {pet.idade}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h5 className="font-medium">{pet.nome}</h5>
-                        <p className="text-sm text-gray-600">{pet.porte} • {pet.idade}</p>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Impede que o clique no botão acione a seleção do pet
+                          handleDeletePet(pet);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="icon icon-tabler icons-tabler-outline icon-tabler-trash"
+                        >
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <path d="M4 7l16 0" />
+                          <path d="M10 11l0 6" />
+                          <path d="M14 11l0 6" />
+                          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                        </svg>
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                
               </div>
             ) : (
               <p className="text-gray-600">Nenhum pet cadastrado.</p>
@@ -182,51 +342,45 @@ function EditarPetModal({ pets, onClose, onSave }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            {/* Botão voltar */}
-            <button
-              type="button"
-              onClick={handleVoltarParaSelecao}
-              className="mb-4 flex items-center text-red-500 hover:text-red-600"
-            >
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Voltar para seleção
-            </button>
+            {modoInicial === 'edicao' && (
+              <button
+                type="button"
+                onClick={handleVoltarParaSelecao}
+                className="mb-4 flex items-center text-red-500 hover:text-red-600"
+              >
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Voltar para seleção
+              </button>
+            )}
 
-            {/* Foto do Pet */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Foto do Pet</label>
               <div className="flex items-center gap-4">
                 {fotoPreview && (
                   <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-red-200">
-                    <img 
-                      src={fotoPreview} 
-                      alt="Preview da foto do pet" 
+                    <img
+                      src={fotoPreview}
+                      alt="Preview da foto do pet"
                       className="w-full h-full object-cover"
-                      onError={(e) => console.log(`Erro ao carregar preview: ${e.target.src}`)} // Log para depuração
+                      onError={(e) => console.log(`Erro ao carregar preview: ${e.target.src}`)}
                     />
                   </div>
                 )}
-                <input 
-                  type="file" 
+                <input
+                  type="file"
+                  ref={fileInputRef} // Adiciona a referência
                   onChange={handleFotoChange}
                   accept="image/*"
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-red-50 file:text-red-600
-                    hover:file:bg-red-100"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
                 />
-             </div>
-              {/* Exibir o nome da foto atual, se existir */}
-              {fotoAtual && !foto && (
+              </div>
+              {fotoAtual && !foto && !modoCadastro && !modoSelecao && (
                 <p className="text-sm text-gray-600 mt-2">Foto atual: {fotoAtual}</p>
               )}
-             </div>
+            </div>
 
-            {/* Nome */}
             <div className="mb-4">
               <label htmlFor="nomePet" className="block text-sm font-medium text-gray-700">
                 Nome<span className="text-red-500">*</span>
@@ -242,7 +396,6 @@ function EditarPetModal({ pets, onClose, onSave }) {
               />
             </div>
 
-            {/* Gênero */}
             <div className="mb-4">
               <label htmlFor="sexoPet" className="block text-sm font-medium text-gray-700">
                 Gênero<span className="text-red-500">*</span>
@@ -255,12 +408,11 @@ function EditarPetModal({ pets, onClose, onSave }) {
                 required
               >
                 <option value="" disabled>Selecione o gênero</option>
-                <option value="macho">Macho</option>
-                <option value="femea">Fêmea</option>
+                <option value="Macho">Macho</option>
+                <option value="Fêmea">Fêmea</option>
               </select>
             </div>
 
-            {/* Idade */}
             <div className="mb-4">
               <label htmlFor="idadePet" className="block text-sm font-medium text-gray-700">
                 Idade<span className="text-red-500">*</span>
@@ -291,7 +443,6 @@ function EditarPetModal({ pets, onClose, onSave }) {
               </div>
             </div>
 
-            {/* Porte */}
             <div className="mb-4">
               <label htmlFor="portePet" className="block text-sm font-medium text-gray-700">
                 Porte<span className="text-red-500">*</span>
@@ -304,13 +455,12 @@ function EditarPetModal({ pets, onClose, onSave }) {
                 required
               >
                 <option value="" disabled>Selecione o porte</option>
-                <option value="pequeno">Pequeno</option>
-                <option value="medio">Médio</option>
-                <option value="grande">Grande</option>
+                <option value="Pequeno">Pequeno</option>
+                <option value="Médio">Médio</option>
+                <option value="Grande">Grande</option>
               </select>
             </div>
 
-            {/* Raça */}
             <div className="mb-6">
               <label htmlFor="racaPet" className="block text-sm font-medium text-gray-700">
                 Raça
@@ -338,14 +488,43 @@ function EditarPetModal({ pets, onClose, onSave }) {
                 className="px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500"
                 disabled={carregando}
               >
-                {carregando ? 'Salvando...' : 'Salvar Alterações'}
+                {carregando ? 'Salvando...' : modoCadastro ? 'Cadastrar Pet' : 'Salvar Alterações'}
               </button>
             </div>
           </form>
         )}
       </div>
 
-      {carregando && (
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Tem certeza que deseja excluir?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Você está prestes a excluir o pet <span className="font-medium">{petToDelete?.nome}</span>. Essa ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeletePet}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                disabled={carregando}
+              >
+                {carregando ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {carregando && !showDeleteConfirm && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 inline-flex items-center">
             <svg

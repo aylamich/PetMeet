@@ -238,7 +238,7 @@ app.post('/api/alterarusuario', async (req, res) => {
     res.send(`Nome: ${nome}`);
 });*/
 
-app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
+/*app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
   console.log('Arquivo recebido:', req.file);
   console.log('Corpo da requisição:', req.body);
 
@@ -260,6 +260,42 @@ app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
       success: true,
       message: 'Pet cadastrado com sucesso!',
       petId
+    });
+
+  } catch (error) {
+    console.error('Erro no cadastro:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao cadastrar pet',
+      details: error.message
+    });
+  }
+});*/
+app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
+  console.log('Arquivo recebido:', req.file);
+  console.log('Corpo da requisição:', req.body);
+
+  try {
+    // Extrai os dados do formulário
+    const { nome, sexo, idade, porte, raca } = req.body;
+    const usuario_id = req.body.usuario_id;
+    const foto = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // Validação básica
+    if (!nome || !sexo || !idade || !porte) {
+      return res.status(400).json({ error: 'Dados incompletos' });
+    }
+
+    // Chama a função do banco de dados
+    const petId = await db.cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca || null);
+    console.log('Pet ID retornado pelo banco:', petId); // Log para verificar o ID
+
+    // Retorna o petId e o caminho da foto
+    res.status(200).json({
+      success: true,
+      message: 'Pet cadastrado com sucesso!',
+      petId,
+      foto // Adiciona o caminho da foto aqui
     });
 
   } catch (error) {
@@ -321,13 +357,22 @@ app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
   }
 });
 
-/*app.post('/api/editarpet', async (req, res) =>  {
-  const {id} = req.body;
+// Rota para deletar pet
+app.delete('/api/deletarpet', async (req, res) => {
+  const { pet_id } = req.query;
+  console.log('Recebida requisição para excluir pet ID:', pet_id);
 
-  let resultado = await db.consultaPetPorId(id); 
-  //console.log(resultado);
-  res.send(resultado);
-});*/
+  if (!pet_id) {
+    return res.status(400).json({ error: 'ID do pet é obrigatório' });
+  }
+
+  try {
+    await db.deletarPet(pet_id);
+    res.status(200).json({ message: 'Pet excluído com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 
 app.post('/api/criarevento', (req, res) => {  

@@ -139,15 +139,8 @@ async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nas
     } 
   }
   
-/*async function consultaUsuarioPorId(id) {
-    const conn = await connect();
-    const sql = "SELECT * FROM usuario WHERE id = ?";
-    const [rows] = await conn.query(sql, [id]);
-    return rows[0]; // Retorna apenas o primeiro registro (o usuário específico)
-}*/
 
-
-async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = null) {
+/*async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = null) {
     const conn = await connect();
     const sql = "INSERT INTO pet (usuario_id, foto, nome, sexo, idade, porte, raca)  VALUES (?, ?, ?, ?, ?, ?, ?)";
     
@@ -162,6 +155,21 @@ async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = n
             throw error; // Lança o erro para ser tratado na rota
         })
        
+}*/
+
+async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = null) {
+    const conn = await connect();
+    const sql = "INSERT INTO pet (usuario_id, foto, nome, sexo, idade, porte, raca) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    const values = [usuario_id, foto, nome, sexo, idade, porte, raca];
+
+    try {
+        const [result] = await conn.query(sql, values); // Desestrutura o resultado
+        console.log('Pet cadastrado com sucesso! ID:', result.insertId);
+        return result.insertId; // Retorna o ID gerado pelo banco
+    } catch (error) {
+        console.error('Erro ao cadastrar pet:', error);
+        throw error; // Lança o erro para ser tratado na rota
+    }
 }
 
 
@@ -199,22 +207,6 @@ async function consultaPetsPorUsuario(usuario_id) {
 }
 
 
-
-/*async function excluirAnimal(id){    
-   
-    try {
-        const conn = await connect();
-        const sql = "DELETE FROM Animal WHERE id = ?"; 
-
-        const values = [id];
-        //console.log(sql, values);
-        await conn.execute(sql, values);                    
-    } catch (error) {
-        console.log('ERRO DO SQL####:', error.errno);
-        throw error;
-    }
-}*/
-
 async function alterarPet(pet_id, nome, sexo, idade, porte, raca, foto) {
     const conn = await connect();
     try {
@@ -241,6 +233,23 @@ async function alterarPet(pet_id, nome, sexo, idade, porte, raca, foto) {
     }
 }    
 
+async function deletarPet(petId) {
+    const conn = await connect();
+    const sql = "DELETE FROM pet WHERE id = ?";
+    const values = [petId];
+  
+    try {
+      const [result] = await conn.query(sql, values);
+      if (result.affectedRows === 0) {
+        throw new Error('Pet não encontrado');
+      }
+      console.log('Pet excluído com sucesso!');
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao excluir pet:', error);
+      throw error;
+    } 
+}
 
 
 async function criarEvento(foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte = 'Geral', sexo = 'Geral', complemento =  null, raca = null) {
@@ -387,7 +396,7 @@ module.exports = {consultaCidadeporUF,
                   alterarEvento,
                   excluirEvento,
                   buscarUsuarioPorEmail,
-           
+                  deletarPet,
                   consultaUsuarioPorId,
                   consultaPetsPorUsuario,
                   
