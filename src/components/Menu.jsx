@@ -141,6 +141,26 @@ const Menu = () => {
     setShowAddPetModal(true);
   };
 
+  // Função para calcular a idade
+  const calcularIdade = (dataNascimento) => {
+    const hoje = new Date();
+    const nascimento = new Date(dataNascimento);
+    let anos = hoje.getFullYear() - nascimento.getFullYear();
+    let meses = hoje.getMonth() - nascimento.getMonth();
+    const dias = hoje.getDate() - nascimento.getDate();
+
+    if (meses < 0 || (meses === 0 && dias < 0)) {
+      anos--;
+      meses += 12;
+    }
+    if (dias < 0 && meses > 0) meses--;
+
+    if (nascimento > hoje) return "Inválida (data futura)";
+    if (anos === 0 && meses === 0 && dias < 30) return "Inválida (menos de 1 mês)";
+    if (anos > 30) return "Inválida (mais de 30 anos)";
+    return anos > 0 ? `${anos} ${anos === 1 ? 'ano' : 'anos'}` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+  };
+
   return (
     <>
       <nav className="fixed top-0 left-0 w-full bg-white shadow-md py-4 px-6 flex items-center justify-between z-50">
@@ -311,7 +331,7 @@ const Menu = () => {
                       </div>
                       <div>
                         <p className="text-gray-600">Idade</p>
-                        <p className="font-medium">{pet.idade ? `${pet.idade}` : 'Não informado'}</p>
+                        <p className="font-medium">{pet.data_nascimento ? calcularIdade(pet.data_nascimento) : 'Não informado'}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">Porte</p>

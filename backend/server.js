@@ -59,7 +59,7 @@ app.get('/api/consultacidade', async (req, res) => {
 
 
 app.post('/api/consultacidadeporUF', async (req, res) => {
-  console.log("Corpo recebido:", req.body); // Debug
+ // console.log("Corpo recebido:", req.body); // Debug
   
   const { ufSelecionado } = req.body; // ← Corrigido para req.body
   
@@ -69,7 +69,7 @@ app.post('/api/consultacidadeporUF', async (req, res) => {
 
   try {
     const resultado = await db.consultaCidadeporUF(ufSelecionado);
-    console.log("Resultado do banco:", resultado); // Debug
+    //console.log("Resultado do banco:", resultado); // Debug
     
     // Garante que sempre retorne um array
     res.json(Array.isArray(resultado) ? resultado : []);
@@ -277,17 +277,17 @@ app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
 
   try {
     // Extrai os dados do formulário
-    const { nome, sexo, idade, porte, raca } = req.body;
+    const { nome, sexo, data_nascimento, porte, raca } = req.body;
     const usuario_id = req.body.usuario_id;
     const foto = req.file ? `/uploads/${req.file.filename}` : null;
 
     // Validação básica
-    if (!nome || !sexo || !idade || !porte) {
+    if (!nome || !sexo || !data_nascimento || !porte) {
       return res.status(400).json({ error: 'Dados incompletos' });
     }
 
     // Chama a função do banco de dados
-    const petId = await db.cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca || null);
+    const petId = await db.cadastrarPet(usuario_id, foto, nome, sexo, data_nascimento, porte, raca || null);
     console.log('Pet ID retornado pelo banco:', petId); // Log para verificar o ID
 
     // Retorna o petId e o caminho da foto
@@ -296,6 +296,7 @@ app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
       message: 'Pet cadastrado com sucesso!',
       petId,
       foto // Adiciona o caminho da foto aqui
+      //idade: calcularIdade(data_nascimento)
     });
 
   } catch (error) {
@@ -334,18 +335,18 @@ app.get('/api/consultapets', async (req, res) => {
 });
 
 app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
-  const { pet_id, nome, sexo, idade, porte, raca, fotoAtual } = req.body;
+  const { pet_id, nome, sexo, data_nascimento, porte, raca, fotoAtual } = req.body;
   const foto = req.file ? `/uploads/${req.file.filename}` : fotoAtual; // Caminho relativo da nova foto
 
   try {
-    await db.alterarPet(pet_id, nome, sexo, idade, porte, raca, foto);
+    await db.alterarPet(pet_id, nome, sexo, data_nascimento, porte, raca, foto);
     res.json({
       message: 'Pet atualizado com sucesso!',
       pet: {
         id: pet_id,
         nome,
         sexo,
-        idade,
+        data_nascimento,
         porte,
         raca,
         foto, // Retorna o caminho real da foto

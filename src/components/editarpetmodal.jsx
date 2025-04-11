@@ -7,10 +7,11 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [petToDelete, setPetToDelete] = useState(null);
 
-  const [idade, setIdade] = useState('');
-  const [unidadeIdade, setUnidadeIdade] = useState('anos');
+  //const [idade, setIdade] = useState('');
+  //const [unidadeIdade, setUnidadeIdade] = useState('anos');
   const [nome, setNome] = useState('');
   const [sexo, setSexo] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [porte, setPorte] = useState('');
   const [raca, setRaca] = useState('');
   const [foto, setFoto] = useState(null);
@@ -30,8 +31,9 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       setPetSelecionado(null);
       setNome('');
       setSexo('');
-      setIdade('');
-      setUnidadeIdade('anos');
+      setDataNascimento('');
+      //setIdade('');
+      //setUnidadeIdade('anos');
       setPorte('');
       setRaca('');
       setFoto(null);
@@ -47,8 +49,9 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       setPetSelecionado(null);
       setNome('');
       setSexo('');
-      setIdade('');
-      setUnidadeIdade('anos');
+      setDataNascimento('');
+     // setIdade('');
+      //setUnidadeIdade('anos');
       setPorte('');
       setRaca('');
       setFoto(null);
@@ -63,17 +66,20 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
 
   useEffect(() => {
     if (petSelecionado && !modoCadastro) {
+      console.log('Pet Selecionado:', petSelecionado); // Depuração
       setNome(petSelecionado.nome || '');
       setSexo(petSelecionado.sexo || '');
+      setDataNascimento(petSelecionado.data_nascimento || '');
       setPorte(petSelecionado.porte || '');
       setRaca(petSelecionado.raca || '');
-      if (petSelecionado.idade) {
+      /*if (petSelecionado.idade) {
         const idadeParts = petSelecionado.idade.split(' ');
         if (idadeParts.length === 2) {
           setIdade(idadeParts[0]);
           setUnidadeIdade(idadeParts[1]);
         }
-      }
+      }*/
+
       if (petSelecionado.foto) {
         setFotoAtual(petSelecionado.foto);
         setFotoPreview(`${BASE_URL}${petSelecionado.foto}`);
@@ -84,22 +90,23 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     } else if (modoCadastro) {
       setNome('');
       setSexo('');
+      setDataNascimento('');
       setPorte('');
       setRaca('');
-      setIdade('');
-      setUnidadeIdade('anos');
+      //setIdade('');
+      //setUnidadeIdade('anos');
       setFoto(null);
       setFotoAtual('');
       setFotoPreview('');
     }
   }, [petSelecionado, modoCadastro]);
 
-  const handleIdadeChange = (event) => {
+  /*const handleIdadeChange = (event) => {
     const valor = event.target.value.replace(/\D/g, '');
     if (valor.length <= 2 && valor !== '0' && valor !== '00') {
       setIdade(valor);
     }
-  };
+  };*/
 
   const handleFotoChange = (e) => {
     const file = e.target.files[0];
@@ -169,14 +176,15 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     e.preventDefault();
     setCarregando(true);
     await new Promise(resolve => setTimeout(resolve, 300));
-    const idadeFormatada = idade === '1' ? `${idade} ${unidadeIdade.replace(/s$/, '')}` : `${idade} ${unidadeIdade}`;
+    //const idadeFormatada = idade === '1' ? `${idade} ${unidadeIdade.replace(/s$/, '')}` : `${idade} ${unidadeIdade}`;
 
     try {
       const formData = new FormData();
       formData.append('nome', nome);
       formData.append('sexo', sexo);
+      formData.append('data_nascimento', dataNascimento);
      // formData.append('idade', `${idade} ${unidadeIdade}`);
-      formData.append('idade', idadeFormatada);
+      //formData.append('idade', idadeFormatada);
       formData.append('porte', porte);
       formData.append('raca', raca || '');
       if (foto) {
@@ -213,7 +221,8 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
             id: data.petId,
             nome,
             sexo,
-            idade: idadeFormatada,
+            data_nascimento: dataNascimento,
+           // idade: idadeFormatada,
             porte,
             raca: raca || null,
             foto: data.foto || null, // Mantém o caminho relativo (ex.: "/uploads/...")
@@ -233,7 +242,8 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
             id: petSelecionado.id,
             nome,
             sexo,
-            idade: idadeFormatada,
+            data_nascimento: dataNascimento,
+            //idade: idadeFormatada,
             porte,
             raca: raca || null,
             foto: data.pet.foto || fotoAtual, // Mantém o caminho relativo
@@ -256,6 +266,26 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     } finally {
       setCarregando(false);
     }
+  };
+
+  // Função para calcular a idade
+  const calcularIdade = (dataNascimento) => {
+    const hoje = new Date();
+    const nascimento = new Date(dataNascimento);
+    let anos = hoje.getFullYear() - nascimento.getFullYear();
+    let meses = hoje.getMonth() - nascimento.getMonth();
+    const dias = hoje.getDate() - nascimento.getDate();
+
+    if (meses < 0 || (meses === 0 && dias < 0)) {
+      anos--;
+      meses += 12;
+    }
+    if (dias < 0 && meses > 0) meses--;
+
+    if (nascimento > hoje) return "Inválida (data futura)";
+    if (anos === 0 && meses === 0 && dias < 30) return "Inválida (menos de 1 mês)";
+    if (anos > 30) return "Inválida (mais de 30 anos)";
+    return anos > 0 ? `${anos} ${anos === 1 ? 'ano' : 'anos'}` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
   };
 
   return (
@@ -302,7 +332,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                         </div>
                         <div>
                           <h5 className="font-medium">{pet.nome}</h5>
-                          <p className="text-sm text-gray-600">{pet.porte} • {pet.idade}</p>
+                          <p className="text-sm text-gray-600">{pet.porte} • {pet.data_nascimento ? calcularIdade(pet.data_nascimento) : 'Não informado'}</p>
                         </div>
                       </div>
                       <button
@@ -365,6 +395,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                       alt="Preview da foto do pet"
                       className="w-full h-full object-cover"
                       onError={(e) => console.log(`Erro ao carregar preview: ${e.target.src}`)}
+                      required
                     />
                   </div>
                 )}
@@ -413,7 +444,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               </select>
             </div>
 
-            <div className="mb-4">
+            {/*<div className="mb-4">
               <label htmlFor="idadePet" className="block text-sm font-medium text-gray-700">
                 Idade<span className="text-red-500">*</span>
               </label>
@@ -441,6 +472,25 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                   </select>
                 </div>
               </div>
+            </div>*/}
+
+            <div className="mb-4">
+              <label htmlFor="dataNascimento" className="block text-sm font-medium text-gray-700">
+                Data de Nascimento<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="dataNascimento"
+                value={dataNascimento}
+                onChange={(e) => setDataNascimento(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                required
+              />
+              {dataNascimento && (
+                <p className={`text-sm mb-2 ${calcularIdade(dataNascimento).includes('Inválida') ? 'text-red-500' : 'text-gray-600'}`}>
+                  {calcularIdade(dataNascimento)}
+                </p>
+              )}
             </div>
 
             <div className="mb-4">

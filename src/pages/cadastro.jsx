@@ -227,17 +227,17 @@ const [cidadeSelecionada, setCidadeSelecionada] = useState('');
       };
 // ---------------------------------------------------- //-------------------------------------------------- //
   return (
-    <div className="min-h-screen flex flex-col md:flex-row"> {/* Responsividade */}
+    <div className="h-screen flex flex-col md:flex-row"> {/* Responsividade */}
       {/* Lado esquerdo: Imagem */}
       <div
-        className="hidden md:block md:w-3/5 bg-cover bg-center" // Oculta em telas pequenas, exibe em telas médias/grandes 3 de 5 blocos
+        className="hidden md:block md:w-3/5 bg-cover bg-center fixed top-0 left-0 h-full" // Oculta em telas pequenas, exibe em telas médias/grandes 3 de 5 blocos
         style={{ backgroundImage: `url(${logo})` }} // Logo PetMeet
       ></div>
 
       {/* Lado direito: Formulário de Cadastro */}
-      <div className="w-full md:w-2/5 flex items-center justify-center bg-white"> {/* Ocupa 2 de 5 blocos na tela em telas médias e grandes e em pequenas toda a largura */}
+      <div className="w-full md:w-2/5 md:ml-[60%] flex items-start justify-center bg-white overflow-y-auto h-screen"> {/* Ocupa 2 de 5 blocos na tela em telas médias e grandes e em pequenas toda a largura */}
         <div className="w-full max-w-md p-8">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">Cadastro</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Cadastro</h2>
 
           {/* Formulário */}
           <form id="cadastroForm" onSubmit={handleSubmit}>

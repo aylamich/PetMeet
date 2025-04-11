@@ -299,7 +299,7 @@ function EditarPerfil({ onClose, onSave }) {
               id="dataNascimento"
               name="data_nascimento"
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-              defaultValue={dadosUsuario.data_nascimento ? dadosUsuario.data_nascimento.split('T')[0] : ''}
+              defaultValue={dadosUsuario.data_nascimento || ''}
               required
               onChange={(e) => validarDataNascimento(e.target.value)}
             />

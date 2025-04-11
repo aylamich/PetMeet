@@ -96,7 +96,7 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
                 u.nome_completo, 
                 u.email, 
                 u.genero, 
-                u.data_nascimento, 
+                DATE_FORMAT(u.data_nascimento, '%Y-%m-%d') as data_nascimento, 
                 u.uf, 
                 u.id_cidade,
                 c.nomeCidade as cidade_nome
@@ -157,10 +157,10 @@ async function alterarUsuario(usuario_id, nome_completo, email, genero, data_nas
        
 }*/
 
-async function cadastrarPet(usuario_id, foto, nome, sexo, idade, porte, raca = null) {
+async function cadastrarPet(usuario_id, foto, nome, sexo, data_nascimento, porte, raca = null) {
     const conn = await connect();
-    const sql = "INSERT INTO pet (usuario_id, foto, nome, sexo, idade, porte, raca) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    const values = [usuario_id, foto, nome, sexo, idade, porte, raca];
+    const sql = "INSERT INTO pet (usuario_id, foto, nome, sexo, data_nascimento, porte, raca) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    const values = [usuario_id, foto, nome, sexo, data_nascimento, porte, raca];
 
     try {
         const [result] = await conn.query(sql, values); // Desestrutura o resultado
@@ -194,7 +194,7 @@ async function consultaPetsPorUsuario(usuario_id) {
         const [rows] = await conn.query(
             `SELECT id, 
                    CASE WHEN foto IS NOT NULL THEN foto ELSE NULL END as foto,
-                    nome, sexo, idade, porte, raca 
+                    nome, sexo, DATE_FORMAT(data_nascimento, '%Y-%m-%d') as data_nascimento, porte, raca 
              FROM pet 
              WHERE usuario_id = ?`,
             [usuario_id]
@@ -207,18 +207,18 @@ async function consultaPetsPorUsuario(usuario_id) {
 }
 
 
-async function alterarPet(pet_id, nome, sexo, idade, porte, raca, foto) {
+async function alterarPet(pet_id, nome, sexo, data_nascimento, porte, raca, foto) {
     const conn = await connect();
     try {
       const sql = `
         UPDATE pet 
-        SET nome = ?, sexo = ?, idade = ?, porte = ?, raca = ?, foto = ? 
+        SET nome = ?, sexo = ?, data_nascimento = ?, porte = ?, raca = ?, foto = ? 
         WHERE id = ?
       `;
       const values = [
         nome !== undefined ? nome : null,
         sexo !== undefined ? sexo : null,
-        idade !== undefined ? idade : null,
+        data_nascimento !== undefined ? data_nascimento : null,
         porte !== undefined ? porte : null,
         raca !== undefined ? raca : null,
         foto !== undefined ? foto : null,
