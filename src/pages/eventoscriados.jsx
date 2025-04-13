@@ -25,8 +25,8 @@ const EventosCriados = () => {
     porte: "Geral",
     sexo: "Geral",
   });
-  const [foto, setFoto] = useState(null); // Novo estado para a foto
-  const [fotoPreview, setFotoPreview] = useState(""); // Novo estado para o preview
+  const [foto, setFoto] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState("");
   const [cidades, setCidades] = useState([]);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
@@ -138,6 +138,7 @@ const EventosCriados = () => {
     setMensagem("");
     setErro("");
 
+    // Validação de campos obrigatórios
     if (
       !formData.nome ||
       !formData.data_inicio ||
@@ -156,16 +157,30 @@ const EventosCriados = () => {
       return;
     }
 
-    const inicio = `${formData.data_inicio}T${formData.hora_inicio}:00`;
-    const fim = `${formData.data_fim}T${formData.hora_fim}:00`;
+    // Validação de data de início (não pode ser no passado)
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zerar horário para comparar apenas datas
+    const dataInicio = new Date(`${formData.data_inicio}T${formData.hora_inicio}:00`);
+    
+    if (dataInicio < hoje) {
+      setErro("A data de início não pode ser anterior ao dia atual.");
+      return;
+    }
+
+    // Validação de data de fim (não pode ser antes da data de início)
+    const dataFim = new Date(`${formData.data_fim}T${formData.hora_fim}:00`);
+    if (dataFim < dataInicio) {
+      setErro("A data de fim não pode ser anterior à data de início.");
+      return;
+    }
 
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("id_usuario", idUsuario);
-      formDataToSend.append("fotoPet", foto); // Alterado para fotoPet
+      formDataToSend.append("fotoPet", foto);
       formDataToSend.append("nome_evento", formData.nome);
-      formDataToSend.append("inicio", inicio);
-      formDataToSend.append("fim", fim);
+      formDataToSend.append("inicio", `${formData.data_inicio}T${formData.hora_inicio}:00`);
+      formDataToSend.append("fim", `${formData.data_fim}T${formData.hora_fim}:00`);
       formDataToSend.append("uf", formData.uf);
       formDataToSend.append("id_cidade", formData.id_cidade);
       formDataToSend.append("bairro", formData.bairro);
@@ -241,6 +256,9 @@ const EventosCriados = () => {
     setMensagem("");
     setErro("");
   };
+
+  // Data mínima para o campo de data (hoje)
+  const hoje = new Date().toISOString().split("T")[0];
 
   return (
     <div className="min-h-screen">
@@ -449,7 +467,7 @@ const EventosCriados = () => {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Campo de Foto - Primeiro, ocupando toda a largura */}
+                {/* Campo de Foto */}
                 <div className="md:col-span-2">
                   <label className="block text-gray-700 mb-2">
                     Foto do Evento<span className="text-red-500">*</span>
@@ -473,7 +491,7 @@ const EventosCriados = () => {
                     required
                   />
                 </div>
-                {/* Campo de Nome - Segundo, ocupando toda a largura */}
+                {/* Campo de Nome */}
                 <div className="md:col-span-2">
                   <label className="block text-gray-700 mb-2">
                     Nome do Evento *
@@ -497,6 +515,7 @@ const EventosCriados = () => {
                     value={formData.data_inicio}
                     onChange={handleChange}
                     className="w-full p-2 border rounded-md"
+                    min={hoje} // Restringe datas passadas
                     required
                   />
                 </div>
@@ -523,6 +542,7 @@ const EventosCriados = () => {
                     value={formData.data_fim}
                     onChange={handleChange}
                     className="w-full p-2 border rounded-md"
+                    min={formData.data_inicio || hoje} // Impede data de fim antes da data de início ou hoje
                     required
                   />
                 </div>

@@ -269,7 +269,7 @@ async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_c
   
   async function consultarEventos(filtro = {}) {
     const conn = await connect();
-    let sql = "SELECT e.*, u.nome_completo AS nome_usuario FROM evento e JOIN usuario u ON e.id_usuario = u.id WHERE 1=1";
+    let sql = "SELECT e.*, u.nome_completo AS nome_usuario, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e JOIN usuario u ON e.usuario_id = u.id WHERE 1=1";
     const values = [];
   
     // Filtros 
@@ -298,10 +298,10 @@ async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_c
       values.push(filtro.data_inicio);
     }
     if (filtro.raca) {
-      sql += " AND e.raca = ?";
-      values.push(filtro.raca);
+      sql += " AND LOWER(e.raca) LIKE LOWER(?)";
+      values.push(`%${filtro.raca}%`);
     }
-  
+    
     sql += " ORDER BY e.inicio ASC";
   
     try {
@@ -345,8 +345,6 @@ async function inscreverUsuario(usuario_id, evento_id) {
   } catch (error) {
     console.error("Erro ao inscrever usuário:", error);
     throw error; // Lança o erro para ser tratado na rota
-  } finally {
-    await conn.end();
   }
 }
 
@@ -357,10 +355,13 @@ async function consultarEventosInscritos(usuario_id, filtro) {
 
   if (filtro === "em_breve") {
     sql = `
-      SELECT e.*, u.nome_completo AS nome_usuario
+      SELECT 
+      e.*, 
+      u.nome_completo AS nome_usuario,
+      (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
       FROM evento e
-      JOIN inscricao i ON e.id = i.evento_id
       JOIN usuario u ON e.id_usuario = u.id
+      JOIN inscricao i ON i.evento_id = e.id
       WHERE i.usuario_id = ?
       AND e.inicio >= NOW()
       ORDER BY e.inicio ASC
@@ -388,6 +389,21 @@ async function consultarEventosInscritos(usuario_id, filtro) {
     throw error; // Lança o erro para ser tratado na rota
   } 
 } 
+
+async function removerInscricao(usuario_id, evento_id) {
+  const conn = await connect();
+  const sql = "DELETE FROM inscricao WHERE usuario_id = ? AND evento_id = ?";
+  const values = [usuario_id, evento_id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    console.log("Inscrição removida:", result.affectedRows);
+    return result;
+  } catch (error) {
+    console.error("Erro ao remover inscrição:", error);
+    throw error;
+  } 
+}
 
 
 async function alterarEvento(id_evento, foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento = null, raca = null, porte = 'Geral', sexo = 'Geral') {
@@ -449,6 +465,7 @@ module.exports = {consultaCidadeporUF,
                   consultarEventos,
                   consultarEventosCriados,
                   consultarEventosInscritos,
+                  removerInscricao,
                   inscreverUsuario,
                   alterarEvento,
                   excluirEvento,

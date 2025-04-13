@@ -400,6 +400,20 @@ app.post('/api/criarevento', upload.single("fotoPet"), async (req, res) => {
     return res.status(400).json({ error: "id_usuario é obrigatório" });
   }
 
+  // Validação de data de início (não pode ser no passado)
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  if (dataInicio < hoje) {
+    return res.status(400).json({ error: "A data de início não pode ser anterior ao dia atual." });
+  }
+
+  // Validação de data de fim (não pode ser antes da data de início)
+  const dataFim = new Date(fim);
+  if (dataFim < dataInicio) {
+    return res.status(400).json({ error: "A data de fim não pode ser anterior à data de início." });
+  }
+
   try {
     await db.criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento,  raca );
     res.json({ message: `Evento "${nome_evento}" criado com sucesso!` });
@@ -413,6 +427,7 @@ app.post('/api/consultareventos', async (req, res) => {
   const filtro = req.body;
   try {
     const eventos = await db.consultarEventos(filtro);
+    console.log("Requisição para consultar eventos com filtros:", filtro);
     res.json(eventos);
   } catch (error) {
     console.error("Erro ao consultar eventos:", error);
@@ -504,6 +519,34 @@ app.post("/api/eventosInscritos", async (req, res) => {
     });
   }
 });
+
+app.post("/api/desinscrever", async (req, res) => {
+  console.log("Corpo da requisição:", req.body);
+
+  try {
+    const { usuario_id, evento_id } = req.body;
+
+    if (!usuario_id || !evento_id) {
+      return res.status(400).json({ error: "Usuário e evento são obrigatórios." });
+    }
+
+    const result = await db.removerInscricao(usuario_id, evento_id);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Inscrição não encontrada." });
+    }
+
+    res.status(200).json({ success: true, message: "Desinscrição realizada com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao desinscrever:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao desinscrever",
+      details: error.message,
+    });
+  }
+});
+
+
  
 
 app.post('/api/alterarevento', (req, res) => {
