@@ -252,88 +252,142 @@ async function deletarPet(petId) {
 }
 
 
-async function criarEvento(foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte = 'Geral', sexo = 'Geral', complemento =  null, raca = null) {
+async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte = "Geral", sexo = "Geral", complemento = null, raca = null ) {
     const conn = await connect();
-    const sql ="INSERT INTO evento (foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca)    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
-    const values = [foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca ];
-    
-    await conn.query(sql, values)
-        .then(() => console.log('Evento criado!'))
-        .catch(error => console.error('Erro:', error))
-}
-
-/*async function consultarEventoPorId(id) {
+    const sql =
+      "INSERT INTO evento (id_usuario, foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const values = [ id_usuario, foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca, ];
+  
+    try {
+      await conn.query(sql, values);
+      console.log("Evento criado!");
+    } catch (error) {
+      console.error("Erro ao criar evento:", error);
+      throw error;
+    } 
+  }
+  
+  async function consultarEventos(filtro = {}) {
     const conn = await connect();
-    const [rows] = await conn.query("SELECT * FROM evento WHERE id = ?", [id]);
-    conn.end();
-    return rows[0] || null; // Retorna o evento ou null se não existir
-
-async function consultarEventosComCidade(filtro = {}) {
-    const conn = await connect();
-    const [rows] = await conn.query(`
-        SELECT 
-            e.*, 
-            c.nome AS cidade_nome 
-        FROM 
-            evento e
-        JOIN 
-            cidade c ON e.id_cidade = c.id
-        WHERE
-            ${filtro.id ? 'e.id = ?' : '1=1'}
-        ORDER BY e.inicio ASC
-    `, filtro.id ? [filtro.id] : []);
-    
-    conn.end();
-    return rows;
-}    
-}*/
-
-
-async function consultarEventos(filtro = {}) {
-    const conn = await connect();
-    
-    // Monta a query dinamicamente baseada nos filtros
-    let sql = "SELECT * FROM evento WHERE 1=1";
+    let sql = "SELECT e.*, u.nome_completo AS nome_usuario FROM evento e JOIN usuario u ON e.id_usuario = u.id WHERE 1=1";
     const values = [];
-    
-    // Filtros opcionais
+  
+    // Filtros 
     if (filtro.id) {
-        sql += " AND id = ?";
-        values.push(filtro.id);
+      sql += " AND e.id = ?";
+      values.push(filtro.id);
     }
     if (filtro.uf) {
-        sql += " AND uf = ?";
-        values.push(filtro.uf);
+      sql += " AND e.uf = ?";
+      values.push(filtro.uf);
     }
     if (filtro.id_cidade) {
-        sql += " AND id_cidade = ?";
-        values.push(filtro.id_cidade);
+      sql += " AND e.id_cidade = ?";
+      values.push(filtro.id_cidade); 
     }
     if (filtro.porte) {
-        sql += " AND porte = ?";
-        values.push(filtro.porte);
+      sql += " AND e.porte = ?";
+      values.push(filtro.porte);
     }
     if (filtro.sexo) {
-        sql += " AND sexo = ?";
-        values.push(filtro.sexo);
+      sql += " AND e.sexo = ?";
+      values.push(filtro.sexo);
     }
     if (filtro.data_inicio) {
-        sql += " AND inicio >= ?";
-        values.push(filtro.data_inicio);
+      sql += " AND e.inicio >= ?";
+      values.push(filtro.data_inicio);
     }
+    if (filtro.raca) {
+      sql += " AND e.raca = ?";
+      values.push(filtro.raca);
+    }
+  
+    sql += " ORDER BY e.inicio ASC";
+  
+    try {
+      const [rows] = await conn.query(sql, values);
+      return rows;
+    } catch (error) {
+      console.error("Erro ao consultar eventos:", error);
+      throw error;
+    }
+  }
 
-    // Ordenação padrão por data de início
-    sql += " ORDER BY inicio ASC";
+  async function consultarEventosCriados(id_usuario) {
+    const conn = await connect();
+    const sql = `
+        SELECT e.*, u.nome_completo AS nome_usuario
+        FROM evento e
+        JOIN usuario u ON e.id_usuario = u.id
+        WHERE e.id_usuario = ?
+    `;
+    const values = [id_usuario];
 
     try {
         const [rows] = await conn.query(sql, values);
+        console.log('Eventos consultados com sucesso!');
         return rows;
     } catch (error) {
         console.error('Erro ao consultar eventos:', error);
         throw error;
     }
 }
+
+async function inscreverUsuario(usuario_id, evento_id) {
+  const conn = await connect();
+  const sql = "INSERT INTO inscricao (usuario_id, evento_id) VALUES (?, ?)";
+  const values = [usuario_id, evento_id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    console.log("Inscrição realizada com sucesso! ID:", result.insertId);
+    return result.insertId; // Retorna o ID da inscrição
+  } catch (error) {
+    console.error("Erro ao inscrever usuário:", error);
+    throw error; // Lança o erro para ser tratado na rota
+  } finally {
+    await conn.end();
+  }
+}
+
+async function consultarEventosInscritos(usuario_id, filtro) {
+  const conn = await connect();
+  let sql;
+  const values = [usuario_id];
+
+  if (filtro === "em_breve") {
+    sql = `
+      SELECT e.*, u.nome_completo AS nome_usuario
+      FROM evento e
+      JOIN inscricao i ON e.id = i.evento_id
+      JOIN usuario u ON e.id_usuario = u.id
+      WHERE i.usuario_id = ?
+      AND e.inicio >= NOW()
+      ORDER BY e.inicio ASC
+    `;
+  } else if (filtro === "ja_aconteceu") {
+    sql = `
+      SELECT e.*, u.nome_completo AS nome_usuario
+      FROM evento e
+      JOIN inscricao i ON e.id = i.evento_id
+      JOIN usuario u ON e.id_usuario = u.id
+      WHERE i.usuario_id = ?
+      AND e.inicio < NOW()
+      ORDER BY e.inicio DESC
+    `;
+  } else {
+    throw new Error("Filtro inválido");
+  }
+
+  try {
+    const [rows] = await conn.query(sql, values);
+    console.log("Eventos inscritos retornados:", rows.length);
+    return rows; // Retorna a lista de eventos
+  } catch (error) {
+    console.error("Erro ao consultar eventos inscritos:", error);
+    throw error; // Lança o erro para ser tratado na rota
+  } 
+} 
 
 
 async function alterarEvento(id_evento, foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento = null, raca = null, porte = 'Geral', sexo = 'Geral') {
@@ -393,6 +447,9 @@ module.exports = {consultaCidadeporUF,
                   alterarPet,
                   criarEvento,
                   consultarEventos,
+                  consultarEventosCriados,
+                  consultarEventosInscritos,
+                  inscreverUsuario,
                   alterarEvento,
                   excluirEvento,
                   buscarUsuarioPorEmail,

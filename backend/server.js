@@ -54,7 +54,7 @@ app.get('/api/consultacidade', async (req, res) => {
   } catch (error) {
     console.error('Erro ao consultar cidades:', error);
     res.status(500).json({ error: 'Erro ao consultar cidades' });
-  }
+  }// acho q nao to usando essa funcao
 });
 
 
@@ -376,14 +376,134 @@ app.delete('/api/deletarpet', async (req, res) => {
 });
 
 
-app.post('/api/criarevento', (req, res) => {  
-    const {foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca } = req.body;      
+app.post('/api/criarevento', upload.single("fotoPet"), async (req, res) => {
+  const {
+    id_usuario,
+    ///foto,
+    nome_evento,
+    inicio,
+    fim,
+    uf,
+    id_cidade,
+    bairro,
+    rua,
+    numero,
+    descricao,
+    porte,
+    sexo,
+    complemento,
+    raca,
+  } = req.body;
+  const foto = req.file ? `/uploads/${req.file.filename}` : null;
 
-    db.criarEvento(foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca);
+  if (!id_usuario) {
+    return res.status(400).json({ error: "id_usuario é obrigatório" });
+  }
 
-    res.send(`Nome: ${nome}`);
+  try {
+    await db.criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento,  raca );
+    res.json({ message: `Evento "${nome_evento}" criado com sucesso!` });
+  } catch (error) {
+    console.error("Erro ao criar evento:", error);
+    res.status(500).json({ error: "Erro ao criar evento" });
+  }
+});
 
-});    
+app.post('/api/consultareventos', async (req, res) => {
+  const filtro = req.body;
+  try {
+    const eventos = await db.consultarEventos(filtro);
+    res.json(eventos);
+  } catch (error) {
+    console.error("Erro ao consultar eventos:", error);
+    res.status(500).json({ error: "Erro ao consultar eventos" });
+  }
+});
+
+app.post('/api/consultareventoscriados', async (req, res) => {
+  const { id_usuario } = req.body;
+  if (!id_usuario) {
+      return res.status(400).json({ error: 'id_usuario é obrigatório' });
+  }
+  try {
+      const eventos = await db.consultarEventosCriados(id_usuario);
+      res.json(eventos);
+  } catch (error) {
+      console.error('Erro ao buscar eventos criados:', error);
+      res.status(500).json({ error: 'Erro ao buscar eventos criados' });
+  }
+});
+
+// Rota para inscrever um usuário em um evento
+app.post("/api/inscrever", async (req, res) => {
+  console.log("Corpo da requisição:", req.body);
+
+  try {
+    // Extrai os dados do formulário
+    const { usuario_id, evento_id } = req.body;
+
+    // Validação básica
+    if (!usuario_id || !evento_id) {
+      return res.status(400).json({ error: "Usuário e evento são obrigatórios." });
+    }
+
+    // Chama a função do banco de dados
+    const inscricaoId = await db.inscreverUsuario(usuario_id, evento_id);
+    console.log("Inscrição ID retornado pelo banco:", inscricaoId);
+
+    // Retorna a resposta
+    res.status(200).json({
+      success: true,
+      message: "Inscrição realizada com sucesso!",
+      inscricaoId,
+    });
+  } catch (error) {
+    console.error("Erro no inscrição:", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ error: "Você já está inscrito neste evento." });
+    }
+    if (error.code === "ER_NO_REFERENCED_ROW_2") {
+      return res.status(400).json({ error: "Evento ou usuário inválido." });
+    }
+    res.status(500).json({
+      success: false,
+      error: "Erro ao realizar inscrição",
+      details: error.message,
+    });
+  }
+});
+
+// Rota para buscar eventos inscritos
+app.post("/api/eventosInscritos", async (req, res) => {
+  console.log("Corpo da requisição:", req.body);
+
+  try {
+    // Extrai os dados do formulário
+    const { usuario_id, filtro } = req.body;
+
+    // Validação básica
+    if (!usuario_id) {
+      return res.status(400).json({ error: "Usuário é obrigatório." });
+    }
+    if (!["em_breve", "ja_aconteceu"].includes(filtro)) {
+      return res.status(400).json({ error: "Filtro inválido." });
+    }
+
+    // Chama a função do banco de dados
+    const eventos = await db.consultarEventosInscritos(usuario_id, filtro);
+    console.log("Eventos retornados pelo banco:", eventos.length);
+
+    // Retorna a resposta
+    res.status(200).json(eventos);
+  } catch (error) {
+    console.error("Erro ao buscar eventos inscritos:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erro ao carregar eventos inscritos",
+      details: error.message,
+    });
+  }
+});
  
 
 app.post('/api/alterarevento', (req, res) => {
@@ -397,7 +517,7 @@ app.post('/api/alterarevento', (req, res) => {
 app.post('/api/editarevento', async (req, res) =>  {
   const {id} = req.body;
 
-  let resultado = await db.consultaEventos(id); 
+  let resultado = await db.consultarEventos(id); 
   //console.log(resultado);
   res.send(resultado);
 });
