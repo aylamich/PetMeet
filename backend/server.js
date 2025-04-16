@@ -549,32 +549,197 @@ app.post("/api/desinscrever", async (req, res) => {
 
  
 
-app.post('/api/alterarevento', (req, res) => {
-  const { foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento, raca, porte, sexo, id_evento } = req.body;
-  
-  db.alterarAgenda( foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento, raca, porte, sexo, id_evento);
-  
-  res.send('');
+// Nova rota para alterar evento
+app.post('/api/alterarevento', upload.single("fotoPet"), async (req, res) => {
+  const {
+    evento_id,
+    id_usuario,
+    nome_evento,
+    inicio,
+    fim,
+    uf,
+    id_cidade,
+    bairro,
+    rua,
+    numero,
+    descricao,
+    porte,
+    sexo,
+    complemento,
+    raca,
+  } = req.body;
+  const foto = req.file ? `/uploads/${req.file.filename}` : null;
+
+  if (!evento_id || !id_usuario) {
+    return res.status(400).json({ error: "evento_id e id_usuario são obrigatórios" });
+  }
+
+  // Validação de data de início (não pode ser no passado)
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  if (dataInicio < hoje) {
+    return res.status(400).json({ error: "A data de início não pode ser anterior ao dia atual." });
+  }
+
+  // Validação de data de fim (não pode ser antes da data de início)
+  const dataFim = new Date(fim);
+  if (dataFim < dataInicio) {
+    return res.status(400).json({ error: "A data de fim não pode ser anterior à data de início." });
+  }
+
+  try {
+    const updated = await db.alterarEvento(
+      evento_id,
+      id_usuario,
+      foto,
+      nome_evento,
+      inicio,
+      fim,
+      uf,
+      id_cidade,
+      bairro,
+      rua,
+      numero,
+      descricao,
+      porte,
+      sexo,
+      complemento,
+      raca
+    );
+    if (updated) {
+      res.json({ message: `Evento "${nome_evento}" atualizado com sucesso!` });
+    } else {
+      res.status(403).json({ error: "Você não tem permissão para editar este evento ou evento não encontrado." });
+    }
+  } catch (error) {
+    console.error("Erro ao alterar evento:", error);
+    res.status(500).json({ error: "Erro ao alterar evento" });
+  }
 });
 
-app.post('/api/editarevento', async (req, res) =>  {
-  const {id} = req.body;
+// Nova rota para excluir evento
+app.post('/api/excluirevento', async (req, res) => {
+  const { evento_id, id_usuario } = req.body;
 
-  let resultado = await db.consultarEventos(id); 
-  //console.log(resultado);
-  res.send(resultado);
+  if (!evento_id || !id_usuario) {
+    return res.status(400).json({ error: "evento_id e id_usuario são obrigatórios" });
+  }
+
+  try {
+    const deleted = await db.excluirEvento(evento_id, id_usuario);
+    if (deleted) {
+      res.json({ message: "Evento excluído com sucesso!" });
+    } else {
+      res.status(403).json({ error: "Você não tem permissão para excluir este evento ou evento não encontrado." });
+    }
+  } catch (error) {
+    console.error("Erro ao excluir evento:", error);
+    res.status(500).json({ error: "Erro ao excluir evento" });
+  }
+}); 
+
+// Criar um comentário
+app.post("/api/comentarios", async (req, res) => {
+  const { id_evento, id_usuario, comentario } = req.body;
+
+  if (!id_evento || !id_usuario || !comentario || comentario.trim() === "") {
+    return res.status(400).json({ error: "Campos obrigatórios faltando." });
+  }
+  if (comentario.length > 500) {
+    return res.status(400).json({ error: "Comentário muito longo (máx. 500 caracteres)." });
+  }
+
+  try {
+    const adicionado = await db.adicionarComentario(id_evento, id_usuario, comentario);
+    if (adicionado) {
+      res.json({ message: "Comentário adicionado com sucesso!" });
+    } else {
+      res.status(400).json({ error: "Não foi possível adicionar o comentário." });
+    }
+  } catch (error) {
+    console.error("Erro ao processar comentário:", error);
+    res.status(500).json({ error: "Erro ao adicionar comentário." });
+  }
 });
 
+// Consultar comentários de um evento
+app.post("/api/consultarcomentarios", async (req, res) => {
+  const { id_evento } = req.body;
+  console.log("Recebido id_evento:", id_evento);
 
-app.post('/api/excluirevento', (req, res) => {
-  const {id} = req.body;
-  //console.log("Chegou no excluir agenda");
-  //console.log(id);
+  if (!id_evento) {
+    return res.status(400).json({ error: "ID do evento é obrigatório." });
+  }
 
-  db.excluirEvento(id);
-  
-  res.send([]);
-});  
+  try {
+    const comentarios = await db.consultarComentarios(Number(id_evento));
+    res.json(comentarios);
+    console.log("Comentários retornados:", comentarios);
+  } catch (error) {
+    console.error("Erro ao processar consulta de comentários:", error);
+    res.status(500).json({ error: "Erro ao consultar comentários." });
+  }
+});
+
+app.post("/api/excluircomentario", async (req, res) => {
+  const { id_comentario, id_usuario } = req.body;
+  console.log("Recebido para exclusão:", { id_comentario, id_usuario });
+
+  if (!id_comentario || !id_usuario) {
+    return res.status(400).json({ error: "ID do comentário e usuário são obrigatórios." });
+  }
+
+  try {
+    const result = await db.excluirComentario(Number(id_comentario), Number(id_usuario));
+    res.json(result);
+  } catch (error) {
+    console.error("Erro ao excluir comentário:", error);
+    res.status(500).json({ error: error.message || "Erro ao excluir comentário." });
+  }
+});
+
+app.post("/api/editarcomentario", async (req, res) => {
+  const { id_comentario, id_usuario, comentario } = req.body;
+  console.log("Recebido para edição:", { id_comentario, id_usuario, comentario });
+
+  if (!id_comentario || !id_usuario || !comentario) {
+    return res.status(400).json({ error: "ID do comentário, usuário e texto são obrigatórios." });
+  }
+
+  if (comentario.trim().length === 0) {
+    return res.status(400).json({ error: "O comentário não pode estar vazio." });
+  }
+
+  if (comentario.length > 500) {
+    return res.status(400).json({ error: "O comentário deve ter no máximo 500 caracteres." });
+  }
+
+  try {
+    const result = await db.editarComentario(Number(id_comentario), Number(id_usuario), comentario);
+    res.json(result);
+  } catch (error) {
+    console.error("Erro ao editar comentário:", error);
+    res.status(500).json({ error: error.message || "Erro ao editar comentário." });
+  }
+});
+
+// Rota para consultar inscritos
+app.get("/api/consultarinscritos", async (req, res) => {
+  const { evento_id } = req.query;
+
+  if (!evento_id) {
+    return res.status(400).json({ error: "evento_id é obrigatório" });
+  }
+
+  try {
+    const inscritos = await db.consultarInscritos(evento_id);
+    res.json(inscritos);
+  } catch (error) {
+    console.error("Erro ao consultar inscritos:", error);
+    res.status(500).json({ error: "Erro ao consultar inscritos" });
+  }
+});
 
 
 app.use(bodyParser.json({ limit: '10mb' }));

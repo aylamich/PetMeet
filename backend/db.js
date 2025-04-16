@@ -269,7 +269,7 @@ async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_c
   
   async function consultarEventos(filtro = {}) {
     const conn = await connect();
-    let sql = "SELECT e.*, u.nome_completo AS nome_usuario, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e JOIN usuario u ON e.usuario_id = u.id WHERE 1=1";
+    let sql = "SELECT e.*, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e JOIN usuario u ON e.id_usuario = u.id  JOIN cidade c ON e.id_cidade = c.id WHERE e.fim >= CURRENT_DATE";
     const values = [];
   
     // Filtros 
@@ -316,16 +316,18 @@ async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_c
   async function consultarEventosCriados(id_usuario) {
     const conn = await connect();
     const sql = `
-        SELECT e.*, u.nome_completo AS nome_usuario
+        SELECT e.*, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade
         FROM evento e
         JOIN usuario u ON e.id_usuario = u.id
+        JOIN cidade c ON e.id_cidade = c.id
         WHERE e.id_usuario = ?
     `;
     const values = [id_usuario];
 
     try {
         const [rows] = await conn.query(sql, values);
-        console.log('Eventos consultados com sucesso!');
+        console.log("Eventos consultados com sucesso! Dados:", rows); // Lo
+        //console.log('Eventos consultados com sucesso!');
         return rows;
     } catch (error) {
         console.error('Erro ao consultar eventos:', error);
@@ -358,10 +360,12 @@ async function consultarEventosInscritos(usuario_id, filtro) {
       SELECT 
       e.*, 
       u.nome_completo AS nome_usuario,
+      c.nomeCidade AS nome_cidade,
       (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
       FROM evento e
       JOIN usuario u ON e.id_usuario = u.id
       JOIN inscricao i ON i.evento_id = e.id
+      JOIN cidade c ON e.id_cidade = c.id
       WHERE i.usuario_id = ?
       AND e.inicio >= NOW()
       ORDER BY e.inicio ASC
@@ -406,30 +410,185 @@ async function removerInscricao(usuario_id, evento_id) {
 }
 
 
-async function alterarEvento(id_evento, foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento = null, raca = null, porte = 'Geral', sexo = 'Geral') {
-    const conn = await connect();
-    const sql ="UPDATE evento SET foto = ?, nome = ?, inicio = ?, fim = ?, uf = ?, id_cidade = ?, bairro = ?, rua = ?, numero = ?, descricao = ?, complemento = ?, raca = ?, porte = ?, sexo = ? WHERE  id = ? ";
-    
-    const values = [ foto, nome, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, complemento, raca, porte, sexo, id_evento ];
+async function alterarEvento(
+  evento_id,
+  id_usuario,
+  foto,
+  nome_evento,
+  inicio,
+  fim,
+  uf,
+  id_cidade,
+  bairro,
+  rua,
+  numero,
+  descricao,
+  porte = "Geral",
+  sexo = "Geral",
+  complemento = null,
+  raca = null
+) {
+  const conn = await connect();
+  let sql = `
+    UPDATE evento 
+    SET nome = ?, inicio = ?, fim = ?, uf = ?, id_cidade = ?, 
+        bairro = ?, rua = ?, numero = ?, descricao = ?, porte = ?, 
+        sexo = ?, complemento = ?, raca = ?
+  `;
+  const values = [
+    nome_evento,
+    inicio,
+    fim,
+    uf,
+    id_cidade,
+    bairro,
+    rua,
+    numero,
+    descricao,
+    porte,
+    sexo,
+    complemento,
+    raca,
+  ];
 
-    await conn.query(sql, values)
-        .then(() => console.log('Evento atualizado com sucesso!'))
-        .catch(error => console.error('Erro ao atualizar evento:', error))
+  if (foto) {
+    sql += ", foto = ?";
+    values.push(foto);
+  }
+
+  sql += " WHERE id = ? AND id_usuario = ?";
+  values.push(evento_id, id_usuario);
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows > 0) {
+      console.log("Evento atualizado!");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Erro ao alterar evento:", error);
+    throw error;
+  }
 }
 
-async function excluirEvento(id) {
-    const conn = await connect();
-    const sql = "DELETE FROM evento WHERE id = ?";
-    
-    await conn.query(sql, [id])
-        .then(([result]) => {
-            if (result.affectedRows > 0) {
-                console.log('Evento excluído com sucesso!');
-            } else {
-                console.log('Nenhum evento encontrado com esse ID.');
-            }
-        })
-        .catch(error => console.error('Erro ao excluir evento:', error))
+async function excluirEvento(evento_id, id_usuario) {
+  const conn = await connect();
+  const sql = "DELETE FROM evento WHERE id = ? AND id_usuario = ?";
+  const values = [evento_id, id_usuario];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows > 0) {
+      console.log("Evento excluído!");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Erro ao excluir evento:", error);
+    throw error;
+  } 
+}
+
+// Adicionar um comentário
+async function adicionarComentario(id_evento, id_usuario, comentario) {
+  const conn = await connect();
+  const sql = "INSERT INTO comentarios (id_evento, id_usuario, comentario) VALUES (?, ?, ?)";
+  const values = [id_evento, id_usuario, comentario];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows > 0) {
+      console.log("Comentário adicionado!");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Erro ao adicionar comentário:", error);
+    throw error;
+  }
+}
+
+// Consultar comentários de um evento
+async function consultarComentarios(id_evento) {
+  console.log("Consultando comentários para id_evento:", id_evento);
+  const conn = await connect();
+  const sql = `
+    SELECT c.id, c.comentario, c.data_criacao, u.nome_completo AS nome_usuario, c.id_usuario
+    FROM comentarios c
+    JOIN usuario u ON c.id_usuario = u.id
+    WHERE c.id_evento = ?
+    ORDER BY c.data_criacao ASC
+  `;
+  const values = [id_evento];
+
+  try {
+    const [comentarios] = await conn.query(sql, values);
+    return comentarios;
+  } catch (error) {
+    console.error("Erro ao consultar comentários:", error);
+    throw error;
+  }
+}
+
+async function excluirComentario(id_comentario, id_usuario) {
+  console.log("Excluindo comentário:", id_comentario, "para usuário:", id_usuario);
+  const conn = await connect();
+  const sql = `
+    DELETE FROM comentarios
+    WHERE id = ? AND id_usuario = ?
+  `;
+  try {
+    const [result] = await conn.query(sql, [id_comentario, id_usuario]);
+    console.log("Resultado da exclusão:", result);
+    if (result.affectedRows === 0) {
+      throw new Error("Comentário não encontrado ou não pertence ao usuário.");
+    }
+    return { message: "Comentário excluído com sucesso." };
+  } catch (error) {
+    console.error("Erro ao excluir comentário:", error);
+    throw error;
+  } 
+}
+
+async function editarComentario(id_comentario, id_usuario, comentario) {
+  console.log("Editando comentário:", id_comentario, "para usuário:", id_usuario);
+  const conn = await connect();
+  const sql = `
+    UPDATE comentarios
+    SET comentario = ?
+    WHERE id = ? AND id_usuario = ?
+  `;
+  try {
+    const [result] = await conn.query(sql, [comentario, id_comentario, id_usuario]);
+    console.log("Resultado da edição:", result);
+    if (result.affectedRows === 0) {
+      throw new Error("Comentário não encontrado ou não pertence ao usuário.");
+    }
+    return { message: "Comentário editado com sucesso." };
+  } catch (error) {
+    console.error("Erro ao editar comentário:", error);
+    throw error;
+  }
+}
+
+async function consultarInscritos(evento_id) {
+  console.log("Consultando inscritos para evento_id:", evento_id);
+  const conn = await connect();
+  const sql = `
+    SELECT u.id, u.nome_completo
+    FROM inscricao i
+    JOIN usuario u ON i.usuario_id = u.id
+    WHERE i.evento_id = ?
+  `;
+  try {
+    const [rows] = await conn.query(sql, [evento_id]);
+    console.log("Inscritos encontrados:", rows);
+    return rows;
+  } catch (error) {
+    console.error("Erro ao consultar inscritos:", error);
+    throw error;
+  }
 }
 
 
@@ -452,6 +611,8 @@ async function consultaCidade() {
     return rows;
 }
 
+
+
 module.exports = {consultaCidadeporUF,
                   consultaCidade,
                   login,
@@ -473,6 +634,11 @@ module.exports = {consultaCidadeporUF,
                   deletarPet,
                   consultaUsuarioPorId,
                   consultaPetsPorUsuario,
+                  adicionarComentario,
+                  consultarComentarios,
+                  excluirComentario,
+                  editarComentario,
+                  consultarInscritos, 
                   
 
                   

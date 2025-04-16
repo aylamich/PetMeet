@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import Menu from "../components/Menu";
+import ComentariosModal from "../components/comentariosmodal";
 
 const EventosCriados = () => {
   const [eventos, setEventos] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
-  const [modalCriarAberto, setModalCriarAberto] = useState(false);
+  const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
+  const [modalComentariosAberto, setModalComentariosAberto] = useState(false);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
+  const [eventoParaExcluir, setEventoParaExcluir] = useState(null);
+  const [idEventoComentarios, setIdEventoComentarios] = useState(null);
+  const [isEdicao, setIsEdicao] = useState(false);
+  const [imageErrors, setImageErrors] = useState({});
   const idUsuario = localStorage.getItem("usuario_id");
 
   const [formData, setFormData] = useState({
@@ -67,7 +74,6 @@ const EventosCriados = () => {
       return;
     }
     try {
-      console.log("Buscando eventos para id_usuario:", idUsuario);
       const response = await fetch("/api/consultareventoscriados", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,6 +86,7 @@ const EventosCriados = () => {
       console.log("Eventos recebidos:", data);
       setEventos(data);
       setErro("");
+      setImageErrors({});
     } catch (error) {
       console.error("Erro ao buscar eventos criados:", error);
       setErro("Não foi possível carregar seus eventos. Tente novamente.");
@@ -88,6 +95,7 @@ const EventosCriados = () => {
 
   const fetchCidades = async (uf) => {
     try {
+      console.log("Consultando cidades para UF:", uf);
       const response = await fetch("/api/consultacidadeporUF", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,12 +141,16 @@ const EventosCriados = () => {
     }
   };
 
+  const handleImageError = (eventoId, foto) => {
+    console.error("Erro ao carregar imagem:", foto);
+    setImageErrors((prev) => ({ ...prev, [eventoId]: true }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensagem("");
     setErro("");
 
-    // Validação de campos obrigatórios
     if (
       !formData.nome ||
       !formData.data_inicio ||
@@ -150,24 +162,20 @@ const EventosCriados = () => {
       !formData.bairro ||
       !formData.rua ||
       !formData.numero ||
-      !formData.descricao ||
-      !foto
+      !formData.descricao
     ) {
-      setErro("Por favor, preencha todos os campos obrigatórios, incluindo a foto.");
+      setErro("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
 
-    // Validação de data de início (não pode ser no passado)
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); // Zerar horário para comparar apenas datas
+    hoje.setHours(0, 0, 0, 0);
     const dataInicio = new Date(`${formData.data_inicio}T${formData.hora_inicio}:00`);
-    
     if (dataInicio < hoje) {
       setErro("A data de início não pode ser anterior ao dia atual.");
       return;
     }
 
-    // Validação de data de fim (não pode ser antes da data de início)
     const dataFim = new Date(`${formData.data_fim}T${formData.hora_fim}:00`);
     if (dataFim < dataInicio) {
       setErro("A data de fim não pode ser anterior à data de início.");
@@ -177,7 +185,12 @@ const EventosCriados = () => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("id_usuario", idUsuario);
-      formDataToSend.append("fotoPet", foto);
+      if (foto) {
+        formDataToSend.append("fotoPet", foto);
+        console.log("Enviando nova foto:", foto.name);
+      } else if (!isEdicao) {
+        formDataToSend.append("fotoPet", "");
+      }
       formDataToSend.append("nome_evento", formData.nome);
       formDataToSend.append("inicio", `${formData.data_inicio}T${formData.hora_inicio}:00`);
       formDataToSend.append("fim", `${formData.data_fim}T${formData.hora_fim}:00`);
@@ -191,26 +204,63 @@ const EventosCriados = () => {
       formDataToSend.append("raca", formData.raca || "");
       formDataToSend.append("porte", formData.porte);
       formDataToSend.append("sexo", formData.sexo);
+      if (isEdicao) formDataToSend.append("evento_id", eventoSelecionado.id);
 
-      const response = await fetch("/api/criarevento", {
+      const url = isEdicao ? "/api/alterarevento" : "/api/criarevento";
+      const response = await fetch(url, {
         method: "POST",
         body: formDataToSend,
       });
 
       const data = await response.json();
       if (response.ok) {
-        setMensagem("Evento criado com sucesso!");
+        console.log("Resposta da API:", data);
+        fecharModalForm();
+        fecharModal();
+        setMensagem(isEdicao ? "Alterações salvas com sucesso!" : "Evento criado com sucesso!");
         fetchEventos();
-        setTimeout(() => {
-          fecharModalCriar();
-        }, 1000);
+        setTimeout(() => setMensagem(""), 3000);
       } else {
-        setErro(data.error || "Erro ao criar evento.");
+        setErro(data.error || `Erro ao ${isEdicao ? "atualizar" : "criar"} evento.`);
       }
     } catch (error) {
-      console.error("Erro ao criar evento:", error);
-      setErro("Erro ao criar evento. Tente novamente.");
+      console.error(`Erro ao ${isEdicao ? "atualizar" : "criar"} evento:`, error);
+      setErro(`Erro ao ${isEdicao ? "atualizar" : "criar"} evento. Tente novamente.`);
     }
+  };
+
+  const handleExcluir = (evento) => {
+    setEventoParaExcluir(evento);
+    setModalConfirmacaoAberto(true);
+  };
+
+  const confirmarExclusao = async () => {
+    try {
+      const response = await fetch("/api/excluirevento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evento_id: eventoParaExcluir.id, id_usuario: idUsuario }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        fecharModalConfirmacao();
+        fecharModal();
+        setMensagem("Evento excluído com sucesso!");
+        fetchEventos();
+        setTimeout(() => setMensagem(""), 3000);
+      } else {
+        setErro(data.error || "Erro ao excluir evento.");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir evento:", error);
+      setErro("Erro ao excluir evento. Tente novamente.");
+    }
+  };
+
+  const fecharModalConfirmacao = () => {
+    setModalConfirmacaoAberto(false);
+    setEventoParaExcluir(null);
   };
 
   const abrirModal = (evento) => {
@@ -228,11 +278,45 @@ const EventosCriados = () => {
       setErro("Você precisa estar logado para criar um evento.");
       return;
     }
-    setModalCriarAberto(true);
+    setIsEdicao(false);
+    setModalFormAberto(true);
   };
 
-  const fecharModalCriar = () => {
-    setModalCriarAberto(false);
+  const abrirModalEditar = () => {
+    if (!idUsuario) {
+      setErro("Você precisa estar logado para editar um evento.");
+      return;
+    }
+    const inicio = new Date(eventoSelecionado.inicio);
+    const fim = new Date(eventoSelecionado.fim);
+    setFormData({
+      nome: eventoSelecionado.nome,
+      data_inicio: inicio.toISOString().split("T")[0],
+      hora_inicio: inicio.toTimeString().slice(0, 5),
+      data_fim: fim.toISOString().split("T")[0],
+      hora_fim: fim.toTimeString().slice(0, 5),
+      uf: eventoSelecionado.uf,
+      id_cidade: eventoSelecionado.id_cidade,
+      bairro: eventoSelecionado.bairro,
+      rua: eventoSelecionado.rua,
+      numero: eventoSelecionado.numero,
+      complemento: eventoSelecionado.complemento || "",
+      descricao: eventoSelecionado.descricao,
+      raca: eventoSelecionado.raca || "",
+      porte: eventoSelecionado.porte,
+      sexo: eventoSelecionado.sexo,
+    });
+    console.log("Foto ao editar:", eventoSelecionado.foto);
+    setFotoPreview(eventoSelecionado.foto || "");
+    setFoto(null);
+    fetchCidades(eventoSelecionado.uf);
+    setIsEdicao(true);
+    setModalAberto(false);
+    setModalFormAberto(true);
+  };
+
+  const fecharModalForm = () => {
+    setModalFormAberto(false);
     setFormData({
       nome: "",
       data_inicio: "",
@@ -253,11 +337,21 @@ const EventosCriados = () => {
     setFoto(null);
     setFotoPreview("");
     setCidades([]);
-    setMensagem("");
     setErro("");
+    setIsEdicao(false);
   };
 
-  // Data mínima para o campo de data (hoje)
+  const abrirModalComentarios = (idEvento) => {
+    console.log("Abrindo modal para idEvento:", idEvento);
+    setIdEventoComentarios(idEvento);
+    setModalComentariosAberto(true);
+  };
+
+  const fecharModalComentarios = () => {
+    setModalComentariosAberto(false);
+    setIdEventoComentarios(null);
+  };
+
   const hoje = new Date().toISOString().split("T")[0];
 
   return (
@@ -277,13 +371,18 @@ const EventosCriados = () => {
           </svg>
         </div>
 
-        {erro && !modalCriarAberto && (
+        {mensagem && (
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+            {mensagem}
+          </div>
+        )}
+        {erro && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
             {erro}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-4">
           {eventos.length > 0 ? (
             eventos.map((evento) => (
               <div
@@ -291,26 +390,23 @@ const EventosCriados = () => {
                 className="bg-white p-6 rounded-lg shadow-md"
               >
                 <img
-                  src={
-                    evento.foto
-                      ? `http://localhost:3000/uploads/${evento.foto}`
-                      : "https://via.placeholder.com/150"
-                  }
+                  src={evento.foto || "https://via.placeholder.com/150"}
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
+                  onError={() => handleImageError(evento.id, evento.foto)}
                 />
                 <h2 className="text-xl font-semibold text-blue-900">
                   {evento.nome}
                 </h2>
                 <p className="text-gray-600 text-sm">
-                  Criado por: {evento.nome_usuario || "Desconhecido"}
+                  Inscritos: {evento.total_inscritos || 0}
                 </p>
                 <p className="text-gray-600">
                   {new Date(evento.inicio).toLocaleDateString("pt-BR")} -{" "}
                   {new Date(evento.fim).toLocaleDateString("pt-BR")}
                 </p>
                 <p className="text-gray-600">
-                  {evento.bairro}, {evento.uf}
+                  {evento.nome_cidade}, {evento.uf}
                 </p>
                 <button
                   onClick={() => abrirModal(evento)}
@@ -349,11 +445,17 @@ const EventosCriados = () => {
       </button>
 
       {modalAberto && eventoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full relative">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+          onClick={fecharModal}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={fecharModal}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
+              className="fixed top-6 right-6 text-gray-600 hover:text-gray-900 z-10 md:static md:top-4 md:right-4"
             >
               <svg
                 className="w-6 h-6"
@@ -373,68 +475,129 @@ const EventosCriados = () => {
             <h2 className="text-2xl font-bold text-blue-900 mb-4">
               {eventoSelecionado.nome}
             </h2>
-            <img
-              src={
-                eventoSelecionado.foto
-                  ? `http://localhost:3000/uploads/${eventoSelecionado.foto}`
-                  : "https://via.placeholder.com/150"
-              }
-              alt={eventoSelecionado.nome}
-              className="w-full h-32 object-cover rounded-md mb-4"
-            />
-            <div className="space-y-2 text-gray-700">
-              <p>
-                <strong>Criado por:</strong>{" "}
-                {eventoSelecionado.nome_usuario || "Desconhecido"}
-              </p>
-              <p>
-                <strong>Data de Início:</strong>{" "}
-                {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
-                {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
-              </p>
-              <p>
-                <strong>Data de Fim:</strong>{" "}
-                {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
-                {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
-              </p>
-              <p>
-                <strong>Local:</strong> {eventoSelecionado.rua},{" "}
-                {eventoSelecionado.numero}{" "}
-                {eventoSelecionado.complemento
-                  ? `, ${eventoSelecionado.complemento}`
-                  : ""}{" "}
-                - {eventoSelecionado.bairro}, {eventoSelecionado.uf}
-              </p>
-              <p>
-                <strong>Descrição:</strong> {eventoSelecionado.descricao}
-              </p>
-              <p>
-                <strong>Porte:</strong> {eventoSelecionado.porte}
-              </p>
-              <p>
-                <strong>Sexo:</strong> {eventoSelecionado.sexo}
-              </p>
-              {eventoSelecionado.raca && (
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-64">
+                <img
+                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
+                  alt={eventoSelecionado.nome}
+                  className="w-full h-40 object-cover rounded-md mb-4"
+                  onError={() => handleImageError(eventoSelecionado.id, eventoSelecionado.foto)}
+                />
+                <div className="space-y-2 text-gray-700">
+                  <p className="text-sm break-words">
+                    <strong>Descrição:</strong> {eventoSelecionado.descricao}
+                  </p>
+                  <button
+                    onClick={() => abrirModalComentarios(eventoSelecionado.id)}
+                    className="inline-flex items-center gap-2 text-blue-900 hover:text-blue-700"
+                    title="Ver comentários"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="icon icon-tabler icons-tabler-filled icon-tabler-message"
+                    >
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M18 3a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-4.724l-4.762 2.857a1 1 0 0 1 -1.508 -.743l-.006 -.114v-2h-1a4 4 0 0 1 -3.995 -3.8l-.005 -.2v-8a4 4 0 0 1 4 -4zm-4 9h-6a1 1 0 0 0 0 2h6a1 1 0 0 0 0 -2m2 -4h-8a1 1 0 1 0 0 2h8a1 1 0 0 0 0 -2" />
+                    </svg>
+                    <span className="text-sm font-medium">Chat</span>
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2 text-gray-700">
                 <p>
-                  <strong>Raça:</strong> {eventoSelecionado.raca}
+                  <strong>Inscritos:</strong> {eventoSelecionado.total_inscritos || 0}
                 </p>
-              )}
+                <p>
+                  <strong>Data de Início:</strong>{" "}
+                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
+                  {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
+                </p>
+                <p>
+                  <strong>Data de Fim:</strong>{" "}
+                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
+                  {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
+                </p>
+                <p>
+                  <strong>Local:</strong> {eventoSelecionado.rua}, {eventoSelecionado.numero}
+                  {eventoSelecionado.complemento
+                    ? `, ${eventoSelecionado.complemento}`
+                    : ""}{" "}
+                  - {eventoSelecionado.bairro}, {eventoSelecionado.nome_cidade},{" "}
+                  {eventoSelecionado.uf}
+                </p>
+                <p>
+                  <strong>Porte:</strong> {eventoSelecionado.porte}
+                </p>
+                <p>
+                  <strong>Sexo:</strong> {eventoSelecionado.sexo}
+                </p>
+                {eventoSelecionado.raca && (
+                  <p>
+                    <strong>Raça:</strong> {eventoSelecionado.raca}
+                  </p>
+                )}
+              </div>
             </div>
-            <button
-              onClick={fecharModal}
-              className="mt-4 w-full bg-blue-900 text-white py-2 px-4 rounded-md hover:bg-blue-800"
-            >
-              Fechar
-            </button>
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={abrirModalEditar}
+                className="flex-1 bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleExcluir(eventoSelecionado)}
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600"
+              >
+                Excluir
+              </button>
+              <button
+                onClick={fecharModal}
+                className="flex-1 bg-blue-900 text-white py-2 px-4 rounded-md hover:bg-blue-800"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {modalCriarAberto && (
+      {modalConfirmacaoAberto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-blue-900 mb-4">
+              Confirmar Exclusão
+            </h2>
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja excluir este evento?
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={confirmarExclusao}
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600"
+              >
+                Confirmar
+              </button>
+              <button
+                onClick={fecharModalConfirmacao}
+                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalFormAberto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]">
             <button
-              onClick={fecharModalCriar}
+              onClick={fecharModalForm}
               className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
             >
               <svg
@@ -453,24 +616,13 @@ const EventosCriados = () => {
               </svg>
             </button>
             <h2 className="text-2xl font-bold text-blue-900 mb-6">
-              Criar Novo Evento
+              {isEdicao ? "Editar Evento" : "Criar Novo Evento"}
             </h2>
             <form onSubmit={handleSubmit}>
-              {mensagem && (
-                <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
-                  {mensagem}
-                </div>
-              )}
-              {erro && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-                  {erro}
-                </div>
-              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Campo de Foto */}
                 <div className="md:col-span-2">
                   <label className="block text-gray-700 mb-2">
-                    Foto do Evento<span className="text-red-500">*</span>
+                    Foto do Evento{!isEdicao && <span className="text-red-500">*</span>}
                   </label>
                   {fotoPreview && (
                     <div className="mb-4 mt-6 w-24 h-24 rounded-full overflow-hidden border-2 border-red-200">
@@ -488,13 +640,12 @@ const EventosCriados = () => {
                     accept="image/*"
                     onChange={handleFotoChange}
                     className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
-                    required
+                    required={!isEdicao}
                   />
                 </div>
-                {/* Campo de Nome */}
                 <div className="md:col-span-2">
                   <label className="block text-gray-700 mb-2">
-                    Nome do Evento *
+                    Nome do Evento<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -515,7 +666,7 @@ const EventosCriados = () => {
                     value={formData.data_inicio}
                     onChange={handleChange}
                     className="w-full p-2 border rounded-md"
-                    min={hoje} // Restringe datas passadas
+                    min={hoje}
                     required
                   />
                 </div>
@@ -534,7 +685,7 @@ const EventosCriados = () => {
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">
-                    Data de Fim <span className="text-red-500">*</span>
+                    Data de Fim<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -542,7 +693,7 @@ const EventosCriados = () => {
                     value={formData.data_fim}
                     onChange={handleChange}
                     className="w-full p-2 border rounded-md"
-                    min={formData.data_inicio || hoje} // Impede data de fim antes da data de início ou hoje
+                    min={formData.data_inicio || hoje}
                     required
                   />
                 </div>
@@ -560,7 +711,9 @@ const EventosCriados = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Estado<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Estado<span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="uf"
                     value={formData.uf}
@@ -577,7 +730,9 @@ const EventosCriados = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Cidade<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Cidade<span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="id_cidade"
                     value={formData.id_cidade}
@@ -595,7 +750,9 @@ const EventosCriados = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Bairro <span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Bairro<span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="bairro"
@@ -606,7 +763,9 @@ const EventosCriados = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Rua<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Rua<span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="rua"
@@ -617,7 +776,9 @@ const EventosCriados = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Número<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Número<span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="numero"
@@ -661,7 +822,9 @@ const EventosCriados = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Porte<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Porte<span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="porte"
                     value={formData.porte}
@@ -676,7 +839,9 @@ const EventosCriados = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-700 mb-2">Sexo<span className="text-red-500">*</span></label>
+                  <label className="block text-gray-700 mb-2">
+                    Sexo<span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="sexo"
                     value={formData.sexo}
@@ -695,11 +860,11 @@ const EventosCriados = () => {
                   type="submit"
                   className="bg-blue-900 text-white py-2 px-6 rounded-md hover:bg-blue-800"
                 >
-                  Criar Evento
+                  {isEdicao ? "Salvar Alterações" : "Criar Evento"}
                 </button>
                 <button
                   type="button"
-                  onClick={fecharModalCriar}
+                  onClick={fecharModalForm}
                   className="bg-gray-200 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-300"
                 >
                   Cancelar
@@ -709,6 +874,13 @@ const EventosCriados = () => {
           </div>
         </div>
       )}
+
+      <ComentariosModal
+        idEvento={idEventoComentarios}
+        idUsuario={idUsuario}
+        isOpen={modalComentariosAberto}
+        onClose={fecharModalComentarios}
+      />
     </div>
   );
 };

@@ -443,7 +443,7 @@ const Explorar = () => {
                   {new Date(evento.fim).toLocaleDateString("pt-BR")}
                 </p>
                 <p className="text-gray-600">
-                  {evento.bairro}, {evento.uf}
+                  {evento.nome_cidade}, {evento.uf}
                 </p>
                 <div className="mt-4 flex gap-2">
                   <button
@@ -481,11 +481,17 @@ const Explorar = () => {
       </div>
 
       {modalAberto && eventoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full relative">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+          onClick={fecharModal}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={fecharModal}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
+              className="fixed top-6 right-6 text-gray-600 hover:text-gray-900 z-10 md:static md:top-4 md:right-4"
             >
               <svg
                 className="w-6 h-6"
@@ -505,53 +511,59 @@ const Explorar = () => {
             <h2 className="text-2xl font-bold text-blue-900 mb-4">
               {eventoSelecionado.nome}
             </h2>
-            <img
-              src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
-              alt={eventoSelecionado.nome}
-              className="w-full h-32 object-cover rounded-md mb-4"
-            />
-            <div className="space-y-2 text-gray-700">
-              <p>
-                <strong>Criado por:</strong>{" "}
-                {eventoSelecionado.nome_usuario || "Desconhecido"}
-              </p>
-              <p>
-                <strong>Inscritos:</strong> {eventoSelecionado.total_inscritos || 0}
-              </p>
-              <p>
-                <strong>Data de Início:</strong>{" "}
-                {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
-                {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
-              </p>
-              <p>
-                <strong>Data de Fim:</strong>{" "}
-                {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
-                {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
-              </p>
-              <p>
-                <strong>Local:</strong> {eventoSelecionado.rua},{" "}
-                {eventoSelecionado.numero}{" "}
-                {eventoSelecionado.complemento
-                  ? `, ${eventoSelecionado.complemento}`
-                  : ""}{" "}
-                - {eventoSelecionado.bairro}, {eventoSelecionado.uf}
-              </p>
-              <p>
-                <strong>Descrição:</strong> {eventoSelecionado.descricao}
-              </p>
-              <p>
-                <strong>Porte:</strong> {eventoSelecionado.porte}
-              </p>
-              <p>
-                <strong>Sexo:</strong> {eventoSelecionado.sexo}
-              </p>
-              {eventoSelecionado.raca && (
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-64">
+                <img
+                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
+                  alt={eventoSelecionado.nome}
+                  className="w-full h-40 object-cover rounded-md mb-4"
+                />
+                <div className="space-y-2 text-gray-700">
+                  <p className="text-sm break-words">
+                    <strong>Descrição:</strong> {eventoSelecionado.descricao}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2 text-gray-700">
                 <p>
-                  <strong>Raça:</strong> {eventoSelecionado.raca}
+                  <strong>Criado por:</strong>{" "}
+                  {eventoSelecionado.nome_usuario || "Desconhecido"}
                 </p>
-              )}
+                <p>
+                  <strong>Inscritos:</strong> {eventoSelecionado.total_inscritos || 0}
+                </p>
+                <p>
+                  <strong>Data de Início:</strong>{" "}
+                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
+                  {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
+                </p>
+                <p>
+                  <strong>Data de Fim:</strong>{" "}
+                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
+                  {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
+                </p>
+                <p>
+                  <strong>Local:</strong> {eventoSelecionado.rua}, {eventoSelecionado.numero}
+                  {eventoSelecionado.complemento
+                    ? `, ${eventoSelecionado.complemento}`
+                    : ""}{" "}
+                  - {eventoSelecionado.bairro}, {eventoSelecionado.nome_cidade},{" "}
+                  {eventoSelecionado.uf}
+                </p>
+                <p>
+                  <strong>Porte:</strong> {eventoSelecionado.porte}
+                </p>
+                <p>
+                  <strong>Sexo:</strong> {eventoSelecionado.sexo}
+                </p>
+                {eventoSelecionado.raca && (
+                  <p>
+                    <strong>Raça:</strong> {eventoSelecionado.raca}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-6 flex gap-2">
               {idUsuario && eventoSelecionado.id_usuario != idUsuario && (
                 <button
                   onClick={() => handleInscrever(eventoSelecionado.id)}
