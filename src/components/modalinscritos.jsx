@@ -223,12 +223,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
                         {dadosUsuario.nome_completo || "Não informado"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-gray-600">Email</p>
-                      <p className="font-medium">
-                        {dadosUsuario.email || "Não informado"}
-                      </p>
-                    </div>
+                   
                     <div>
                       <p className="text-gray-600">Gênero</p>
                       <p className="font-medium">

@@ -12,6 +12,7 @@ function CadastroPet() {
   const [raca, setRaca] = useState('');
   const [foto, setFoto] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(''); // Novo estado para o preview
+  const [erroGeral, setErroGeral] = useState(''); // Novo estado para erros gerais
 
   // Atualizar a unidade de idade (Ano/Anos ou Mês/Meses) conforme o valor digitado
  /* const handleIdadeChange = (event) => {
@@ -77,7 +78,7 @@ function CadastroPet() {
   
     const salvarPet = (redirecionar) => {
       if (!nome || !sexo || !dataNascimento || !porte || !foto) {
-        alert('Preencha todos os campos obrigatórios.');
+        setErroGeral('Preencha todos os campos obrigatórios.');
         return;
       }
   
@@ -106,13 +107,13 @@ function CadastroPet() {
               window.location.href = '/login';
             }, 3000);
           } else {
-            alert('Pet adicionado com sucesso!');
+            setErroGeral('Pet adicionado com sucesso!'); // Usando modal para sucesso também
             limparFormulario();
           }
         })
         .catch(error => {
           console.error('Erro:', error);
-          alert('Deu ruim, tenta de novo.');
+          setErroGeral('Deu ruim, tenta de novo.');
         });
     }; 
 
@@ -129,7 +130,7 @@ function CadastroPet() {
     event.preventDefault();  // Evite que a página seja recarregada ao enviar o formulário, para processar dados de formulários sem recarregar a página
 
     if (!nome || !sexo || !dataNascimento || !porte || !foto) {
-      alert('Preencha todos os campos obrigatórios.');
+      setErroGeral('Preencha todos os campos obrigatórios.');
       return;
   }
 
@@ -138,7 +139,7 @@ function CadastroPet() {
 
     // Validar se a data de nascimento não é futura
     if (nascimento > hoje) {
-        alert('A data de nascimento não pode ser no futuro.');
+        setErroGeral('A data de nascimento não pode ser no futuro.');
         return;
     }
 
@@ -160,15 +161,15 @@ function CadastroPet() {
 
     // Bloquear envio se a idade for inválida
     if (nascimento > hoje) {
-      alert('A data de nascimento não pode ser no futuro.');
+      setErroGeral('A data de nascimento não pode ser no futuro.');
       return;
   }
   if (anos === 0 && meses === 0 && dias < 30) {
-      alert('A idade do pet não pode ser inferior a 1 mês.');
+      setErroGeral('A idade do pet não pode ser inferior a 1 mês.');
       return;
   }
   if (anos > 30) {
-      alert('A data de nascimento indica que o pet teria mais de 30 anos. Verifique se está correta.');
+      setErroGeral('A data de nascimento indica que o pet teria mais de 30 anos. Verifique se está correta.');
       return;
   }
 
@@ -219,8 +220,13 @@ function CadastroPet() {
       }, 3000);
     } catch (error) {
       console.error('Erro na requisição:', error);
-      alert('Erro ao cadastrar pet. Tente novamente.');
+      setErroGeral('Erro ao cadastrar pet. Tente novamente.');
     }
+  };
+
+  // Função para fechar o modal de erro
+  const fecharModal = () => {
+    setErroGeral(''); // Limpa o erro geral para fechar o modal
   };
 
   return (
@@ -382,17 +388,35 @@ function CadastroPet() {
             </button>
           </form>
         </div>
-      </div>
 
-      {/* Modal de Sucesso */}
-      {mostrarModalSucesso && (
-        <div id="modalSucessoPet" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-            <h3 className="text-2xl font-bold text-green-600 mb-4">Salvo com sucesso!</h3>
-            <p className="text-gray-700">O cadastro do pet foi concluído. Você será redirecionado a página de Login</p>
+        {/* Modal de Sucesso */}
+        {mostrarModalSucesso && (
+          <div id="modalSucessoPet" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+              <h3 className="text-2xl font-bold text-green-600 mb-4">Salvo com sucesso!</h3>
+              <p className="text-gray-700">O cadastro do pet foi concluído. Você será redirecionado a página de Login</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Modal de erro geral */}
+        {erroGeral && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full border border-red-300">
+              <h3 className="text-lg font-medium text-red-800 mb-4">Erro</h3>
+              <p className="text-sm text-red-800 mb-6">{erroGeral}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={fecharModal}
+                  className="bg-red-400 text-white px-4 py-2 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

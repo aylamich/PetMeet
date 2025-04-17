@@ -7,6 +7,8 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
   const [erro, setErro] = useState("");
   const [editandoId, setEditandoId] = useState(null);
   const [textoEditado, setTextoEditado] = useState("");
+  const [mostrarModalConfirmacao, setMostrarModalConfirmacao] = useState(false); // Estado para o modal de confirmação
+  const [idComentarioParaExcluir, setIdComentarioParaExcluir] = useState(null); // Estado para armazenar o ID do comentário a excluir
   const comentariosRef = useRef(null);
 
   // Logar idUsuario para depuração
@@ -83,16 +85,17 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
   };
 
   const handleExcluirComentario = async (id_comentario) => {
-    if (!window.confirm("Tem certeza que deseja excluir este comentário?")) {
-      return;
-    }
+    setIdComentarioParaExcluir(id_comentario); // Armazena o ID do comentário
+    setMostrarModalConfirmacao(true); // Mostra o modal de confirmação
+  };
 
+  const confirmarExclusao = async () => {
     try {
       const response = await fetch("/api/excluircomentario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id_comentario,
+          id_comentario: idComentarioParaExcluir,
           id_usuario: idUsuario,
         }),
       });
@@ -109,7 +112,15 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
       console.error("Erro ao excluir comentário:", error);
       setErro("Erro ao excluir comentário. Tente novamente.");
       setTimeout(() => setErro(""), 3000);
+    } finally {
+      setMostrarModalConfirmacao(false); // Fecha o modal
+      setIdComentarioParaExcluir(null); // Limpa o ID
     }
+  };
+
+  const cancelarExclusao = () => {
+    setMostrarModalConfirmacao(false); // Fecha o modal
+    setIdComentarioParaExcluir(null); // Limpa o ID
   };
 
   const handleEditarComentario = (id_comentario, comentario) => {
@@ -349,6 +360,31 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
           </div>
         ) : (
           <p className="text-gray-500 text-sm">Faça login para comentar.</p>
+        )}
+        {/* Modal de confirmação de exclusão */}
+        {mostrarModalConfirmacao && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full border border-red-300">
+              <h3 className="text-lg font-medium text-red-800 mb-4">Confirmar Exclusão</h3>
+              <p className="text-sm text-gray-700 mb-6">
+                Tem certeza que deseja excluir este comentário?
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={cancelarExclusao}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarExclusao}
+                  className="bg-red-400 text-white px-4 py-2 rounded-md hover:bg-red-300 focus:outline-none focus:ring-2 focus:ring-red-300"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

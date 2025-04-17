@@ -81,8 +81,6 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
       }
       console.error('Erro ao cadastrar usuário:', error);
       throw error; // Propaga o erro com detalhes
-    //} finally {
-     // await conn.end();
     }
   }
 

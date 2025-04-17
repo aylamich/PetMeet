@@ -149,6 +149,9 @@ app.post('/api/cadastrousuario', async (req, res) => {
     res.status(200).json({ message: 'Usuário cadastrado com sucesso!', usuario_id });
   } catch (error) {
     console.error('Erro no servidor:', error);
+    if (error.message === 'Este email já está cadastrado.') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).send('Erro ao cadastrar usuário');
   }
 });
