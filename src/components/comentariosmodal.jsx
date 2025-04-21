@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 
-const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
-  const [comentarios, setComentarios] = useState([]);
-  const [novoComentario, setNovoComentario] = useState("");
-  const [mensagem, setMensagem] = useState("");
+const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // props para carregar comentários especificos e controlar o modal
+  const [comentarios, setComentarios] = useState([]); // Armazena a lista de comentários recebida da API
+  const [novoComentario, setNovoComentario] = useState(""); // Guarda o novo comentário a ser enviado pelo usuário
+  const [mensagem, setMensagem] = useState(""); // Mensagem de sucesso 
   const [erro, setErro] = useState("");
-  const [editandoId, setEditandoId] = useState(null);
-  const [textoEditado, setTextoEditado] = useState("");
+  const [editandoId, setEditandoId] = useState(null); // ID do comentário que está sendo editado
+  const [textoEditado, setTextoEditado] = useState(""); // Guarda o texto do comentário em edição.
   const [mostrarModalConfirmacao, setMostrarModalConfirmacao] = useState(false); // Estado para o modal de confirmação
   const [idComentarioParaExcluir, setIdComentarioParaExcluir] = useState(null); // Estado para armazenar o ID do comentário a excluir
-  const comentariosRef = useRef(null);
+  const comentariosRef = useRef(null); // Referência ao elemento <div> que contém a lista de comentários, usada para rolar automaticamente até o final quando novos comentários são carregados.
 
   // Logar idUsuario para depuração
   console.log("idUsuario recebido:", idUsuario);
 
+  // Busca a lista de comentários associados ao evento da API
   const fetchComentarios = async () => {
     try {
       console.log("Enviando idEvento:", idEvento);
@@ -37,27 +38,29 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
       const data = await response.json();
       console.log("Comentários recebidos:", data);
       data.forEach((c) => console.log(`Comentário ID ${c.id}: id_usuario=${c.id_usuario}`));
-      setComentarios(data);
+      setComentarios(data); // Atualiza o estado com os comentários recebidos
     } catch (error) {
       console.error("Erro ao buscar comentários:", error);
       setErro(error.message || "Erro ao carregar comentários.");
-      setTimeout(() => setErro(""), 3000);
+      setTimeout(() => setErro(""), 3000); // Limpa a mensagem de erro após 3 segundos
     }
   };
 
+  // Envia o novo comentário para a API
   const handleEnviarComentario = async () => {
-    if (!idUsuario) {
+    if (!idUsuario) { // Verifica se o usuário está logado
       setErro("Você precisa estar logado para comentar.");
       setTimeout(() => setErro(""), 3000);
       return;
     }
-    if (!novoComentario.trim()) {
+    if (!novoComentario.trim()) { // Verifica se o comentário não está vazio
       setErro("O comentário não pode estar vazio.");
       setTimeout(() => setErro(""), 3000);
       return;
     }
 
     try {
+      // Envia o novo comentário para a API
       const response = await fetch("/api/comentarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,8 +72,8 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
       });
       const data = await response.json();
       if (response.ok) {
-        setNovoComentario("");
-        await fetchComentarios();
+        setNovoComentario(""); // Limpa o campo de comentário após o envio
+        await fetchComentarios(); // Atualiza a lista de comentários após o envio
         setMensagem("Comentário enviado com sucesso!");
         setTimeout(() => setMensagem(""), 3000);
       } else {
@@ -84,11 +87,13 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
     }
   };
 
+  // Função para a exclusão de um comentário
   const handleExcluirComentario = async (id_comentario) => {
     setIdComentarioParaExcluir(id_comentario); // Armazena o ID do comentário
     setMostrarModalConfirmacao(true); // Mostra o modal de confirmação
   };
 
+  // Função para confirmar a exclusão do comentário
   const confirmarExclusao = async () => {
     try {
       const response = await fetch("/api/excluircomentario", {
@@ -118,16 +123,19 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
     }
   };
 
+  // Função para cancelar a exclusão do comentário
   const cancelarExclusao = () => {
     setMostrarModalConfirmacao(false); // Fecha o modal
     setIdComentarioParaExcluir(null); // Limpa o ID
   };
 
+  // Função para iniciar a edição de um comentário
   const handleEditarComentario = (id_comentario, comentario) => {
     setEditandoId(id_comentario);
     setTextoEditado(comentario);
   };
 
+  // Função para salvar a edição do comentário
   const handleSalvarEdicao = async (id_comentario) => {
     if (!textoEditado.trim()) {
       setErro("O comentário não pode estar vazio.");
@@ -136,6 +144,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
     }
 
     try {
+      // Envia o comentário editado para a API
       const response = await fetch("/api/editarcomentario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,6 +156,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
       });
       const data = await response.json();
       if (response.ok) {
+        // Sai do modo de edição, recarrega os comentários e exibe mensagem de sucesso
         setEditandoId(null);
         setTextoEditado("");
         await fetchComentarios();
@@ -163,28 +173,33 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
     }
   };
 
+  // Função para cancelar a edição de um comentário
   const handleCancelarEdicao = () => {
     setEditandoId(null);
     setTextoEditado("");
   };
 
+  // Efeito para carregar comentários quando o modal é aberto
   useEffect(() => {
     if (isOpen && idEvento) {
       fetchComentarios();
     }
   }, [isOpen, idEvento]);
 
+  // Efeito para rolar a lista de comentários até o final quando ela é atualizada
   useEffect(() => {
     if (comentariosRef.current) {
-      comentariosRef.current.scrollTop = comentariosRef.current.scrollHeight;
+      comentariosRef.current.scrollTop = comentariosRef.current.scrollHeight; // Rola para o final da lista de comentários sempre que ela for atualizada
     }
   }, [comentarios]);
 
-  if (!isOpen) return null;
+  if (!isOpen) return null; // Não renderiza nada se o modal não estiver aberto.
 
+  // ****** Renderiza o modal de comentários ******
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-6 max-w-lg w-full relative flex flex-col h-[80vh]">
+        {/* Botão para fechar o modal */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 z-10"
@@ -205,6 +220,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
           </svg>
         </button>
         <h2 className="text-xl font-bold text-blue-900 mb-4">Comentários</h2>
+        {/* Mensagens de sucesso ou erro */}
         {mensagem && (
           <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-md text-sm">
             {mensagem}
@@ -216,11 +232,12 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
           </div>
         )}
         <div
-          ref={comentariosRef}
+          ref={comentariosRef} // Referência para rolar automaticamente
           className="flex-1 overflow-y-auto mb-4 space-y-3 max-h-[60vh]"
         >
           {comentarios.length > 0 ? (
             comentarios.map((comentario) => (
+              // Renderiza cada comentário com estilo condicional (azul para o usuário logado)
               <div
                 key={comentario.id}
                 className={`p-3 rounded-2xl max-w-[80%] ${
@@ -233,11 +250,12 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
                   <div className="flex-1">
                     <p className="text-xs text-gray-500 mb-1">
                       <strong>{comentario.nome_usuario}</strong> ·{" "}
-                      {new Date(comentario.data_criacao).toLocaleString("pt-BR", {
+                      {new Date(comentario.data_criacao).toLocaleString("pt-BR", { // Formata a data
                         dateStyle: "short",
                         timeStyle: "short",
                       })}
                     </p>
+                    { /*Exibe textarea para edição ou o texto do comentário. */}
                     {editandoId === comentario.id ? (
                       <div>
                         <textarea
@@ -266,7 +284,8 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
                       <p className="text-gray-700 text-sm">{comentario.comentario}</p>
                     )}
                   </div>
-                  {Number(comentario.id_usuario) === Number(idUsuario) &&
+                  {/* Botões de editar/excluir aparecem apenas para comentários do usuário logado. */}
+                  {Number(comentario.id_usuario) === Number(idUsuario) && // NUMBER é pra converter o idUsuario para número, já que ele vem como string da api
                     editandoId !== comentario.id && (
                       <div className="flex gap-2 ml-2">
                         <button
@@ -327,6 +346,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => {
             <p className="text-gray-500 text-sm">Nenhum comentário ainda.</p>
           )}
         </div>
+        {/* Exibe campo de novo comentário se o usuário estiver logado, ou mensagem de login. */}
         {idUsuario ? (
           <div className="flex items-center gap-2 sticky bottom-0 bg-white pt-2">
             <textarea

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import logo from '/logo.png'; // Importação da logo
 
-function EditarPerfil({ onClose, onSave }) {
-  // Declarações de estados para os campos do formulário
-  const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
-  const [emailErro, setEmailErro] = useState(''); // Inicializa o estado emailErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
-  const [mostrarRequisitosSenha, setMostrarRequisitosSenha] = useState(false); // Initializa o estado mostrarRequisitosSenha com um valor inicial de false (não aparece)
+function EditarPerfil({ onClose, onSave }) { // Usa mesma lógica do cadastro de usuário, só muda o endpoint e o método
+  // Declarações de estados para os campos do formulário, mesma coisa do cadastro usuário
+  const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia).
+  const [emailErro, setEmailErro] = useState(''); // Inicializa o estado emailErro com um valor inicial de '' (string vazia).
+  const [mostrarRequisitosSenha, setMostrarRequisitosSenha] = useState(false); // Inicializa o estado mostrarRequisitosSenha com um valor inicial de false (não aparece)
   const [mostrarModalSucesso, setMostrarModalSucesso] = useState(false); // Estado para controlar o modal de sucesso
-  const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
+  const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia).
   const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para mostrar/esconder a senha
 
   // Estados para os requisitos da senha
@@ -24,17 +23,17 @@ function EditarPerfil({ onClose, onSave }) {
   // Estado para os dados do usuário
   const [dadosUsuario, setDadosUsuario] = useState(null);
 
-  // Carregar os dados do usuário ao montar o componente
+  // ****** Carregar os dados do usuário ao montar o componente ****** //
   useEffect(() => {
     const usuarioId = localStorage.getItem('usuario_id');
     if (usuarioId) {
-      fetch(`/api/consultausuario?id=${usuarioId}`)
+      fetch(`/api/consultausuario?id=${usuarioId}`) // Busca os dados do usuário pelo ID armazenado no localStorage para preencher o formulário
         .then(response => {
           if (!response.ok) throw new Error('Erro ao buscar usuário');
           return response.json();
         })
         .then(data => {
-          setDadosUsuario(data);
+          setDadosUsuario(data); // Armazena os dados do usuário no estado
           setUfSelecionado(data.uf || '');
           setCidadeSelecionada(data.id_cidade || '');
         })
@@ -120,7 +119,7 @@ function EditarPerfil({ onClose, onSave }) {
       const response = await fetch('/api/consultacidadeporUF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ufSelecionado }) // ← Enviando no body
+        body: JSON.stringify({ ufSelecionado }) // Enviando no body
       });
       
       const data = await response.json();
@@ -156,8 +155,8 @@ function EditarPerfil({ onClose, onSave }) {
     setDataNascimentoErro('');
     setEmailErro('');
 
-    const formData = new FormData(event.target);
-    const dadosUsuarioAtualizados = {
+    const formData = new FormData(event.target); // Pega os dados do formulário
+    const dadosUsuarioAtualizados = { // Cria um objeto com os dados do usuário
       usuario_id: localStorage.getItem('usuario_id'),
       nome_completo: formData.get('nome_completo'),
       email: formData.get('email'),
@@ -181,12 +180,13 @@ function EditarPerfil({ onClose, onSave }) {
     }
 
     try {
+      // ***** Envia os dados atualizados para o servidor ***** //
       const response = await fetch('/api/alterarusuario', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dadosUsuarioAtualizados)
+        body: JSON.stringify(dadosUsuarioAtualizados) // Envia os dados do usuário atualizados
       });
 
       if (!response.ok) {
@@ -196,17 +196,27 @@ function EditarPerfil({ onClose, onSave }) {
       const data = await response.json();
       console.log('Resposta do servidor:', data);
 
-      localStorage.setItem('usuarioNome', dadosUsuarioAtualizados.nome_completo);
-      // Chama onSave com os dados atualizados
-      onSave({
-        nome_completo: dadosUsuarioAtualizados.nome_completo,
+      const nomeNormalizado = data.usuario?.nome_completo || dadosUsuarioAtualizados.nome_completo;
+      console.log('Nome normalizado usado:', nomeNormalizado);
+
+      // Atualizar localStorage
+      localStorage.setItem('usuarioNome', nomeNormalizado);
+      
+      // Atualizar dadosUsuario com os dados salvos
+      const dadosAtualizados = {
+        ...dadosUsuario, // usado para copiar todas as propriedades de um objeto para um novo objeto
+        nome_completo: nomeNormalizado,
         email: dadosUsuarioAtualizados.email,
         genero: dadosUsuarioAtualizados.genero,
         data_nascimento: dadosUsuarioAtualizados.data_nascimento,
         uf: dadosUsuarioAtualizados.uf,
         id_cidade: dadosUsuarioAtualizados.id_cidade,
         cidade_nome: cidades.find(c => c.id === dadosUsuarioAtualizados.id_cidade)?.nomeCidade || dadosUsuario.cidade_nome,
-      });
+      };
+      setDadosUsuario(dadosAtualizados);
+
+    // Chama onSave com os dados atualizados
+    onSave(dadosAtualizados);
 
       setMostrarModalSucesso(true);
       setTimeout(() => {
@@ -283,8 +293,8 @@ function EditarPerfil({ onClose, onSave }) {
               <option value="" disabled>
                 Selecione seu gênero
               </option>
-              <option value="feminino">Feminino</option>
-              <option value="masculino">Masculino</option>
+              <option value="Feminino">Feminino</option>
+              <option value="Masculino">Masculino</option>
             </select>
           </div>
 

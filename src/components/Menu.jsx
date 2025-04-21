@@ -1,40 +1,41 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import EditarPerfil from './editarperfil'; // Importa o componente do modal
-import EditarPetModal from './editarpetmodal';
+import EditarPerfil from './editarperfil'; // Importa o componente do modal editar perfil usuário
+import EditarPetModal from './editarpetmodal'; // Importa o componente do modal editar perfil pet
 
 const Menu = () => {
-  const [showConfUsuario, setShowConfUsuario] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false); // Estado para o modal de edição
-  const [showAddPetModal, setShowAddPetModal] = useState(false);
-  const [usuario, setUsuario] = useState("Usuário");
-  const [dadosUsuario, setDadosUsuario] = useState(null);
-  const [dadosPets, setDadosPets] = useState(null);
-
-  const [showEditPetModal, setShowEditPetModal] = useState(false);
-  const [petSelecionado, setPetSelecionado] = useState(null);
+  const [showConfUsuario, setShowConfUsuario] = useState(false); // Estado para o menu de configurações do usuário, inicialmente fechado
+  const [showProfileModal, setShowProfileModal] = useState(false); // Estado para o modal de visualização do perfil, inicialmente fechado
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false); // Estado para o modal de edição perfil usário
+  const [showAddPetModal, setShowAddPetModal] = useState(false); // Estado para o modal de cadastro de pet, inicialmente fechado
+  const [usuario, setUsuario] = useState("Usuário"); // Nome do usuário, inicialmente "Usuário"
+  const [dadosUsuario, setDadosUsuario] = useState(null); // Dados completos do usuário, inicialmente nulo
+  const [dadosPets, setDadosPets] = useState(null); // Dados dos pets, inicialmente nulo
+  const [showEditPetModal, setShowEditPetModal] = useState(false);  // Estado para o modal de edição de pet, inicialmente fechado
+  const [petSelecionado, setPetSelecionado] = useState(null); // Pet selecionado para edição, inicialmente nulo
+  const [showNavMenu, setShowNavMenu] = useState(false); // Controla a exibição do menu de navegação em telas pequenas
 
   useEffect(() => {
-    const nomeUsuario = localStorage.getItem('usuarioNome');
-    const usuarioId = localStorage.getItem('usuario_id');
+    const nomeUsuario = localStorage.getItem('usuarioNome'); // Obtém o nome do usuário do localStorage
+    const usuarioId = localStorage.getItem('usuario_id'); // Obtém o ID do usuário do localStorage
 
     console.log("Nome do usuário no localStorage:", nomeUsuario);
     console.log("ID do usuário no localStorage:", usuarioId);
 
     if (nomeUsuario) {
-      setUsuario(nomeUsuario);
+      setUsuario(nomeUsuario); // Atualiza o estado com o nome do usuário
     }
     if (usuarioId) {
-      buscarDadosUsuario(usuarioId);
-      buscarDadosPets(usuarioId);
+      buscarDadosUsuario(usuarioId); // Busca os dados do usuário na API
+      buscarDadosPets(usuarioId); // Busca os dados dos pets na API
     } else {
       console.log("Nenhum usuarioId encontrado no localStorage.");
     }
   }, []);
 
+  // ******* Funções para buscar dados do usuário na API ********* //
   const buscarDadosUsuario = (usuarioId) => {
-    fetch(`/api/consultausuario?id=${usuarioId}`, {
+    fetch(`/api/consultausuario?id=${usuarioId}`, { // consultando o usuário pelo ID armazenado no localStorage
       method: 'GET', // Usando GET, pois estamos consultando por ID
       headers: { 'Content-Type': 'application/json' },
     })
@@ -51,8 +52,9 @@ const Menu = () => {
       .catch(error => console.error("Erro ao buscar dados do usuário:", error));
   };
 
+  // ****** Função para buscar dados dos pets do usuário na API ********* //
   const buscarDadosPets = (usuarioId) => {
-    fetch(`/api/consultapets?usuario_id=${usuarioId}`, {
+    fetch(`/api/consultapets?usuario_id=${usuarioId}`, { // consultando os pets do usuário pelo ID armazenado no localStorage
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -60,88 +62,84 @@ const Menu = () => {
         if (!response.ok) throw new Error(`Erro na resposta da API: ${response.status}`);
         return response.json();
       })
-      .then(data => setDadosPets(data))
+      .then(data => setDadosPets(data)) // Atualiza o estado com os dados dos pets
       .catch(error => console.error("Erro ao buscar dados dos pets:", error));
   };
 
+  // Função para logout: remove dados do localStorage e redireciona para login
   const handleLogout = () => {
     localStorage.removeItem('usuarioNome');
     localStorage.removeItem('usuario_id');
     window.location.href = "/login";
   };
 
+  // Função para atualizar os dados do usuário após edição
   const handleSaveProfile = (updatedUsuario) => {
-    setDadosUsuario(updatedUsuario);
+    setDadosUsuario(updatedUsuario); // Atualiza os dados do usuário no estado
     setUsuario(updatedUsuario.nome_completo || usuario); // Atualiza o nome exibido no menu
+    localStorage.setItem('usuarioNome', updatedUsuario.nome_completo); // Atualiza o nome do usuário no localStorage
   };
 
-  /*const handleSavePet = (petAtualizado) => {
-    if (dadosPets && dadosPets.some(p => p.id === petAtualizado.id)) {
-      // Atualiza um pet existente
-      setDadosPets(dadosPets.map(p => p.id === petAtualizado.id ? petAtualizado : p));
-    } else {
-      // Adiciona um novo pet
-      setDadosPets(prevPets => (prevPets ? [...prevPets, petAtualizado] : [petAtualizado]));
-    }
-    setShowEditPetModal(false);
-    setShowAddPetModal(false);
-  };*/
-
+  // Função para atualizar ou adicionar um pet
   const handleSavePet = (petAtualizado) => {
+    // prevPets representa a lista de pets antes da atualização, usada para adicionar, atualizar ou remover um pet
     setDadosPets((prevPets) => {
       if (!prevPets) return [petAtualizado]; // Caso inicial, quando prevPets é null
       const exists = prevPets.find(p => p.id === petAtualizado.id);
-      if (exists) {
+      if (exists) { 
         // Atualiza um pet existente
         return prevPets.map(p => (p.id === petAtualizado.id ? petAtualizado : p));
       }
       // Adiciona um novo pet
-      return [...prevPets, petAtualizado];
+      return [...prevPets, petAtualizado]; 
     });
+
     // Fecha os modais após salvar
     setShowEditPetModal(false);
     setShowAddPetModal(false);
   };
 
-  /*const handleDeletePet = (petId) => {
-    setDadosPets(dadosPets.filter(p => p.id !== petId));
-  };*/
-
   const handleDeletePet = (petId) => {
     setDadosPets((prevPets) => {
       if (!prevPets) return null; // Evita erro se prevPets for null
-      return prevPets.filter(p => p.id !== petId);
+      return prevPets.filter(p => p.id !== petId); // Remove o pet com o ID especificado da lista
     });
   };
 
+  // Função para alternar a exibição do painel lateral
   const exibeConfUsuario = () => {
     setShowConfUsuario(!showConfUsuario);
   };
 
+  // ------- Funções para abrir/fechar modais ------- //
   const openProfileModal = () => {
-    setShowProfileModal(true);
-    //setShowConfUsuario(false);
+    setShowProfileModal(true); // Abre o modal de perfil
   };
 
   const openEditProfileModal = () => {
-    setShowEditProfileModal(true);
+    setShowEditProfileModal(true); // Abre o modal de edição do perfil
     };
     
   const closeEditProfileModal = () => {
-  setShowEditProfileModal(false);
+  setShowEditProfileModal(false); // Fecha o modal de edição do perfil
   };
 
   const openEditPetModal = (pet = null) => {
     setPetSelecionado(pet);
-    setShowEditPetModal(true);
+    setShowEditPetModal(true); // Abre o modal de edição do pet de acordo com o pet selecionado
   };
 
   const openAddPetModal = () => {
     setPetSelecionado(null); // Reseta o pet selecionado no componente pai
-    setShowAddPetModal(true);
+    setShowAddPetModal(true); // Abre o modal de cadastro de pet
   };
 
-  // Função para calcular a idade
+  // Função para alternar a exibição do menu hambúrguer
+  const toggleNavMenu = () => {
+    setShowNavMenu(!showNavMenu);
+  };
+
+  // Função para calcular a idade, mesma coisa do cadastro pet
   const calcularIdade = (dataNascimento) => {
     const hoje = new Date();
     const nascimento = new Date(dataNascimento);
@@ -161,10 +159,36 @@ const Menu = () => {
     return anos > 0 ? `${anos} ${anos === 1 ? 'ano' : 'anos'}` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
   };
 
+// ----------------- // ------------------ //  
   return (
     <>
+     {/* Barra de navegação fixa no topo */}
       <nav className="fixed top-0 left-0 w-full bg-white shadow-md py-4 px-6 flex items-center justify-between z-50">
-        <div>
+      <div className="flex items-center gap-4">
+          {/* Botão de menu hambúrguer (visível apenas em telas pequenas) */}
+          <button
+            type="button"
+            onClick={toggleNavMenu}
+            className="md:hidden text-gray-700 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
+            aria-label={showNavMenu ? "Fechar menu de navegação" : "Abrir menu de navegação"}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {showNavMenu ? (
+                // Ícone de fechar (X) quando o menu está aberto
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                // Ícone de menu hambúrguer (três linhas) quando o menu está fechado
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+          {/* Botão sair */}
           <button onClick={handleLogout} className="flex items-center gap-2 text-red-500 hover:text-red-600 font-medium">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m-3-3h10.5m0 0l-3-3m3 3l-3 3"></path>
@@ -173,12 +197,66 @@ const Menu = () => {
           </button>
         </div>
 
+        {/* Links de navegação (visíveis apenas em telas grandes) */}
         <ul className="hidden md:flex space-x-8 text-gray-700 font-medium">
           <li><Link to="/eventosinscritos" className="hover:text-red-400 transition">Eventos Inscritos</Link></li>
           <li><Link to="/explorar" className="hover:text-red-400 transition">Explorar</Link></li>
           <li><Link to="/eventoscriados" className="hover:text-red-400 transition">Eventos Criados</Link></li>
         </ul>
 
+        {/* Drawer de navegação para telas pequenas */}
+      <div
+        id="nav-drawer"
+        className={`fixed top-0 left-0 z-50 h-screen w-64 bg-white shadow-lg transform transition-transform duration-300 ${
+          showNavMenu ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col p-6`}
+      >
+        {/* Botão de fechar o drawer */}
+        <button
+          onClick={toggleNavMenu}
+          type="button"
+          className="self-end text-red-500 hover:bg-red-100 rounded-lg text-sm w-8 h-8 flex items-center justify-center"
+          aria-label="Fechar menu de navegação"
+        >
+          <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+          </svg>
+          <span className="sr-only">Fechar</span>
+        </button>
+
+        {/* Links de navegação no drawer */}
+        <ul className="flex flex-col space-y-4 mt-8 text-gray-700 font-medium">
+          <li>
+            <Link
+              to="/eventosinscritos"
+              className="block py-2 px-4 hover:bg-red-50 hover:text-red-400 transition rounded"
+              onClick={toggleNavMenu} // Fecha o menu ao clicar no link
+            >
+              Eventos Inscritos
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/explorar"
+              className="block py-2 px-4 hover:bg-red-50 hover:text-red-400 transition rounded"
+              onClick={toggleNavMenu} // Fecha o menu ao clicar no link
+            >
+              Explorar
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/eventoscriados"
+              className="block py-2 px-4 hover:bg-red-50 hover:text-red-400 transition rounded"
+              onClick={toggleNavMenu} // Fecha o menu ao clicar no link
+            >
+              Eventos Criados
+            </Link>
+          </li>
+        </ul>
+      </div>
+
+        {/* Nome do usuário e ícone de perfil */}
         <div className="flex items-center space-x-3">
           <span className="text-gray-700 font-medium">Olá, {usuario}</span>
           <div className="items-center ms-3">
@@ -188,6 +266,7 @@ const Menu = () => {
               className="flex text-sm bg-red-400 rounded-full focus:ring-4 focus:ring-red-300"
             >
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                {/* Ícone de perfil fixo */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="32"
@@ -209,6 +288,7 @@ const Menu = () => {
         </div>
       </nav>
 
+      {/* Painel lateral de configurações */}
       <div 
         id="drawer-contact" 
         className={`fixed top-0 right-0 z-40 h-screen p-6 bg-red-50 w-[600px] transition-transform ${
@@ -216,7 +296,7 @@ const Menu = () => {
         } flex flex-col items-center justify-start overflow-y-auto border-l border-red-200 shadow-lg`}
       >
         <button 
-          onClick={exibeConfUsuario} 
+          onClick={exibeConfUsuario}
           type="button" 
           className="text-red-500 bg-transparent hover:bg-red-100 rounded-lg text-sm w-8 h-8 absolute top-2.5 right-2.5 flex items-center justify-center"
         >
@@ -228,6 +308,7 @@ const Menu = () => {
 
         <div className="w-full max-w-md mt-16">
           <h2 className="text-2xl font-bold mb-6 text-red-600">Configurações</h2>
+          {/* Botões do painel lateral */}
           <div className="space-y-4 w-full">
             <button onClick={openProfileModal} className="p-4 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition-colors w-full">
               <h3 className="font-medium text-red-700">Ver Perfil</h3>
@@ -267,6 +348,7 @@ const Menu = () => {
           </div>
 
           <div className="p-6">
+            {/* Informações do usuário */}
             <div className="mb-8">
               <h4 className="text-lg font-semibold text-red-600 mb-4 border-b border-red-200 pb-2">Informações Pessoais</h4>
               {dadosUsuario ? (
@@ -306,6 +388,7 @@ const Menu = () => {
               )}
             </div>
 
+            {/* Informações dos pets */}
             <div>
               <h4 className="text-lg font-semibold text-red-600 mb-4 border-b border-red-200 pb-2">Informações do Pet</h4>
               {dadosPets && dadosPets.length > 0 ? (
@@ -366,14 +449,14 @@ const Menu = () => {
         {/* Modal de Edição do Perfil */}
         <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showEditProfileModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <div className={`transform transition-all duration-300 w-full max-w-3xl ${showEditProfileModal ? 'scale-100' : 'scale-95'}`}>
-            <EditarPerfil onClose={closeEditProfileModal} onSave={handleSaveProfile} />
+            <EditarPerfil onClose={closeEditProfileModal} onSave={handleSaveProfile} /> {/* Modal de edição do perfil do usuário abre com o  EditarPerfil */}
           </div>
         </div>
 
       {/* Modal de Edição de Pet */}
       <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${showEditPetModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className={`transform transition-all duration-300 w-full max-w-3xl ${showEditPetModal ? 'scale-100' : 'scale-95'}`}>
-          <EditarPetModal
+          <EditarPetModal // Modal de edição de pet abre com os dados do pet selecionado
             pets={dadosPets}
             onClose={() => setShowEditPetModal(false)}
             onSave={handleSavePet}

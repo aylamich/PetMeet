@@ -8,9 +8,9 @@ const ModalInscritos = ({ eventoId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
-  // Buscar inscritos do evento
+  // Buscar inscritos do evento, Função assíncrona para buscar a lista de inscritos de um evento usando uma requisição GET
   const fetchInscritos = async () => {
-    if (!eventoId) {
+    if (!eventoId) { // Valida se eventoId é válido antes de fazer a requisição
       setErro("Evento inválido. Selecione um evento válido.");
       setLoading(false);
       return;
@@ -18,17 +18,17 @@ const ModalInscritos = ({ eventoId, onClose }) => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/consultarinscritos?evento_id=${eventoId}`, {
+      const response = await fetch(`/api/consultarinscritos?evento_id=${eventoId}`, { // Faz uma requisição GET para buscar os inscritos do evento de acordo com o eventoId
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
-      if (!response.ok) {
+      if (!response.ok) { // Verifica se a resposta da requisição é bem sucedida
         const errorText = await response.text();
         throw new Error(`Erro ${response.status}: ${errorText}`);
       }
       const data = await response.json();
-      setInscritos(data);
-      setErro("");
+      setInscritos(data); // Atualiza o estado com os dados dos inscritos
+      setErro(""); // Limpa a mensagem de erro, se houver
     } catch (error) {
       console.error("Erro ao buscar inscritos:", error);
       setErro("Não foi possível carregar os inscritos. Verifique a conexão ou tente novamente.");
@@ -37,16 +37,17 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     }
   };
 
-  // Buscar dados do usuário
+  // Buscar dados do usuário insctrito no evento e selecionado no modal
   const buscarDadosUsuario = async (usuarioId) => {
     try {
-      const response = await fetch(`/api/consultausuario?id=${usuarioId}`, {
+      const response = await fetch(`/api/consultausuario?id=${usuarioId}`, { // Faz uma requisição GET para buscar os dados do usuário de acordo com o usuarioId
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
         throw new Error(`Erro ${response.status}`);
       }
+      // Armazena os dados do usuário no estado
       const data = await response.json();
       setDadosUsuario(data);
     } catch (error) {
@@ -55,10 +56,10 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     }
   };
 
-  // Buscar dados dos pets
+  // Buscar dados dos pets do usuário
   const buscarDadosPets = async (usuarioId) => {
     try {
-      const response = await fetch(`/api/consultapets?usuario_id=${usuarioId}`, {
+      const response = await fetch(`/api/consultapets?usuario_id=${usuarioId}`, { // Faz uma requisição GET para buscar os dados dos pets de acordo com o usuarioId
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -73,7 +74,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     }
   };
 
-  // Calcular idade
+  // Calcular idade, mesma coisa do cadastro de pet
   const calcularIdade = (dataNascimento) => {
     const hoje = new Date();
     const nascimento = new Date(dataNascimento);
@@ -93,15 +94,16 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     return anos > 0 ? `${anos} ${anos === 1 ? "ano" : "anos"}` : `${meses} ${meses === 1 ? "mês" : "meses"}`;
   };
 
-  // Abrir modal de perfil
+  // Abrir modal de perfil com dados do usuário e pets completos
   const openProfileModal = async (usuario) => {
-    await Promise.all([
+    await Promise.all([ // Executa as buscas de usuário e pets em paralelo usando Promise.all, ambas requisições começam ao mesmo tempo
       buscarDadosUsuario(usuario.id),
       buscarDadosPets(usuario.id),
     ]);
-    setShowProfileModal(true);
+    setShowProfileModal(true); // Abre o modal APÓS as buscas serem concluídas
   };
 
+  // Efeito que carrega os inscritos quando o eventoId muda
   useEffect(() => {
     if (eventoId) {
       fetchInscritos();
@@ -116,6 +118,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     return null;
   }
 
+  // ************ Renderiza o modal de inscritos ************
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -123,8 +126,9 @@ const ModalInscritos = ({ eventoId, onClose }) => {
     >
       <div
         className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Impede o fechamento do modal ao clicar dentro dele
       >
+        {/* Cabeçalho do modal com título e botão de fechar */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-red-600">Inscritos</h2>
           <button
@@ -147,12 +151,14 @@ const ModalInscritos = ({ eventoId, onClose }) => {
           </button>
         </div>
 
+        {/* Mensagem de erro, se houver */}
         {erro && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
             {erro}
           </div>
         )}
 
+        {/* Lista de inscritos ou mensagem de carregamento */}
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-10 bg-gray-200 rounded"></div>
@@ -162,6 +168,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
         ) : inscritos.length > 0 ? (
           <div className="space-y-4">
             {inscritos.map((inscrito) => (
+              // Renderiza cada inscrito com nome e botão para abrir o modal de perfil
               <div
                 key={inscrito.id}
                 className="p-4 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer transition-colors"
@@ -177,7 +184,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
           <p className="text-gray-600 text-center">Nenhum inscrito encontrado.</p>
         )}
 
-        {/* Modal de Visualização do Perfil */}
+        {/* Modal de Visualização do Perfil, após selecionar o usuário */}
         <div
           className={`fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${
             showProfileModal ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -215,6 +222,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
                 <h4 className="text-lg font-semibold text-red-600 mb-4 border-b border-red-200 pb-2">
                   Informações Pessoais
                 </h4>
+                { /* Renderiza o modal com informações do usuário e seus pets*/}
                 {dadosUsuario ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -332,7 +340,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
 
             <div className="bg-gray-50 px-6 py-3 rounded-b-lg flex justify-end">
               <button
-                onClick={() => setShowProfileModal(false)}
+                onClick={() => setShowProfileModal(false)} // Fecha o modal de perfil
                 className="px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors"
               >
                 Fechar

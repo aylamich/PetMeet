@@ -4,13 +4,13 @@ import logo from '/logo.png'; // Importação da logo
 
 function Cadastro() {
   // Declarações de estados para os campos do formulário
-  const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
-  const [emailErro, setEmailErro] = useState(''); // Inicializa o estado emailErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
+  const [senhaErro, setSenhaErro] = useState(''); // Inicializa o estado senhaErro com um valor inicial de '' (string vazia). 
+  const [emailErro, setEmailErro] = useState(''); // Inicializa o estado emailErro com um valor inicial de '' (string vazia). 
   const [mostrarRequisitosSenha, setMostrarRequisitosSenha] = useState(false); // Initializa o estado mostrarRequisitosSenha com um valor inicial de false (não aparece)
   const [carregando, setCarregando] = useState(false); // Estado para controlar o spinner de carregamento
-  const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia). o SET atualiza o valor do estado.
+  const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia). 
   const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para mostrar/esconder a senha
-  const [erroGeral, setErroGeral] = useState(''); // Novo estado para erros gerais do servidor
+  const [erroGeral, setErroGeral] = useState(''); // Estado para erros gerais 
 
   // Estados para os requisitos da senha
   const [temMinimoCaracteres, setTemMinimoCaracteres] = useState(false); // Todos inicializam falsos
@@ -52,8 +52,6 @@ function Cadastro() {
     const dataAtual = new Date(); // Cria uma nova data com o momento atual
     const dataNasc = new Date(dataNascimento); // Converte a string de data de nascimento em um objeto Date
 
-    /*const idade = dataAtual.getFullYear() - dataNasc.getFullYear(); // // Calcula a idade subtraindo os anos*/
-
     // Verifica se o ano de nascimento é posterior a 2025
     if (dataNasc.getFullYear() > 2025) {
       setDataNascimentoErro('O ano de nascimento não pode ser posterior a 2025.');
@@ -69,7 +67,7 @@ function Cadastro() {
     const diaNasc = dataNasc.getDate(); // Dia de nascimento
 
     if (mesAtual < mesNasc || (mesAtual === mesNasc && diaAtual < diaNasc)) {
-      idade--; // Ainda não fez aniversário este ano
+      idade--; // Ainda não fez aniversário este ano, diminui a idade
     }
 
     // Verifica se o usuário tem pelo menos 18 anos
@@ -80,17 +78,6 @@ function Cadastro() {
     setDataNascimentoErro(''); // Limpa a mensagem de erro se a data for válida
     return true;
   };
-
-  /*const validarSenha = (senha) => {
-    const regexSenha = /^(?=.*[A-Z])(?=.*\d).{6,}$/; // Requisitos da senha: 1 letra maiúscula, 1 número e no mínimo 6 caracteres
-    if (!regexSenha.test(senha)) { // Se a senha não atender aos requisitos (! é negação)
-      setSenhaErro('A senha não atende aos requisitos.'); // Mensagem de erro
-      return false;
-    } else {
-      setSenhaErro(''); // Limpa a mensagem de erro se a senha for válida
-      return true;
-    }
-  };*/
 
   const validarSenha = (senha) => {
     // Verifica cada requisito da senha
@@ -128,10 +115,10 @@ function Cadastro() {
       const response = await fetch('/api/consultacidadeporUF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ufSelecionado }), // ← Enviando no body
+        body: JSON.stringify({ ufSelecionado }), // Enviando no body
       });
 
-      const data = await response.json();
+      const data = await response.json(); // Pega a resposta do servidor em JSON
       setCidades(data);
       setCidadeSelecionada('');
     } catch (error) {
@@ -173,7 +160,7 @@ function Cadastro() {
       genero: formData.get('genero'),
       data_nascimento: formData.get('data_nascimento'),
       uf: formData.get('uf'),
-      id_cidade: formData.get('cbcidade'), // Note que o name no HTML é "cbcidade"
+      id_cidade: formData.get('cbcidade'), 
       senha: formData.get('senha'),
     };
 
@@ -222,7 +209,7 @@ function Cadastro() {
     } catch (error) {
       console.error('Erro na requisição:', error);
       setCarregando(false);
-      setErroGeral(error.message); // Define o erro geral
+      setErroGeral(error.message); // Define o erro geral que vem do BACKEND
     }
   };
 
@@ -257,12 +244,7 @@ function Cadastro() {
               >
                 Nome Completo<span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                id="nomeCompleto"
-                name="nome_completo"
-                placeholder="Digite seu nome completo"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <input type="text" id="nomeCompleto" name="nome_completo" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
                 onChange={handleNomeCompletoChange} // Chama a função para não deixar digitar números
                 required
               />
@@ -273,12 +255,7 @@ function Cadastro() {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email<span className="text-red-500">*</span>
               </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="seuemail@exemplo.com"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 onChange={(e) => validarEmail(e.target.value)} // Validação
                 required
               />
@@ -290,10 +267,7 @@ function Cadastro() {
               <label htmlFor="genero" className="block text-sm font-medium text-gray-700">
                 Gênero<span className="text-red-500">*</span>
               </label>
-              <select
-                id="genero"
-                name="genero"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <select id="genero" name="genero" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm  focus:outline-none focus:ring-2 focus:ring-red-200" 
                 required
               >
                 <option value="" disabled selected>
@@ -312,11 +286,7 @@ function Cadastro() {
               >
                 Data de Nascimento<span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                id="dataNascimento"
-                name="data_nascimento"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <input type="date" id="dataNascimento" name="data_nascimento" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
                 onChange={(e) => validarDataNascimento(e.target.value)} // Validação
               />
@@ -331,10 +301,7 @@ function Cadastro() {
               <label htmlFor="uf" className="block text-sm font-medium text-gray-700">
                 Estado<span className="text-red-500">*</span>
               </label>
-              <select
-                id="uf"
-                name="uf"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <select id="uf" name="uf" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
                 value={ufSelecionado}
                 onChange={(e) => setUfSelecionado(e.target.value)}
@@ -377,10 +344,7 @@ function Cadastro() {
               <label htmlFor="cidade" className="block text-sm font-medium text-gray-700">
                 Cidade<span className="text-red-500">*</span>
               </label>
-              <select
-                id="cidade"
-                name="cbcidade"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              <select id="cidade" name="cbcidade" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 value={cidadeSelecionada}
                 onChange={handleCidadeChange}
                 disabled={!ufSelecionado}
@@ -408,7 +372,7 @@ function Cadastro() {
               </label>
               <div className="relative">
                 <input
-                  type={mostrarSenha ? 'text' : 'password'}
+                  type={mostrarSenha ? 'text' : 'password'} // Se mostrarSenha for true, o tipo do input é text (aparece), senão password (esconde)
                   id="senha"
                   name="senha"
                   placeholder="Digite sua senha"
@@ -506,7 +470,7 @@ function Cadastro() {
           </form>
         </div>
 
-        {/* Modal de erro geral */}
+        {/* Modal de erro geral que vem do BACKEND */}
         {erroGeral && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full border border-red-300">

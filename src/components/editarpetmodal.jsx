@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'selecao' }) {
-  const [modoSelecao, setModoSelecao] = useState(modoInicial === 'edicao');
-  const [petSelecionado, setPetSelecionado] = useState(null);
+  const [modoSelecao, setModoSelecao] = useState(modoInicial === 'selecao'); // Modo de seleção ou cadastro
+  const [petSelecionado, setPetSelecionado] = useState(null); // Pet selecionado para edição
   const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [petToDelete, setPetToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Estado para controle do modal de confirmação de exclusão
+  const [petToDelete, setPetToDelete] = useState(null); // Pet a ser excluído
 
-  //const [idade, setIdade] = useState('');
-  //const [unidadeIdade, setUnidadeIdade] = useState('anos');
   const [nome, setNome] = useState('');
   const [sexo, setSexo] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -17,23 +15,21 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
   const [foto, setFoto] = useState(null);
   const [fotoAtual, setFotoAtual] = useState('');
   const [fotoPreview, setFotoPreview] = useState('');
-  const [carregando, setCarregando] = useState(false);
+  const [carregando, setCarregando] = useState(false); // Estado para controle do carregamento
 
-  const fileInputRef = useRef(null); // Adicione esta linha
+  const fileInputRef = useRef(null); // Referência para o input de arquivo, usada para limpar o campo
 
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = 'http://localhost:3000'; // URL base para carregar imagens
   
   useEffect(() => {
     // Executa toda vez que o modal é aberto ou modoInicial muda
     if (modoInicial === 'cadastro') {
-      setModoCadastro(true);
-      setModoSelecao(false);
+      setModoCadastro(true); // Ativa modo de cadastro
+      setModoSelecao(false); // Desativa modo de seleção
       setPetSelecionado(null);
       setNome('');
       setSexo('');
       setDataNascimento('');
-      //setIdade('');
-      //setUnidadeIdade('anos');
       setPorte('');
       setRaca('');
       setFoto(null);
@@ -44,14 +40,12 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         fileInputRef.current.value = ''; // Limpa o valor do input
       }
     } else if (modoInicial === 'selecao') {
-      setModoCadastro(false);
-      setModoSelecao(true);
+      setModoCadastro(false); // Desativa modo de cadastro
+      setModoSelecao(true); // Ativa modo de seleção
       setPetSelecionado(null);
       setNome('');
       setSexo('');
       setDataNascimento('');
-     // setIdade('');
-      //setUnidadeIdade('anos');
       setPorte('');
       setRaca('');
       setFoto(null);
@@ -62,23 +56,17 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         fileInputRef.current.value = ''; // Limpa o valor do input
       }
     }
-  }, [modoInicial, onClose]); // Adiciona onClose como dependência para detectar reabertura
+  }, [modoInicial, onClose]); // / Executa quando modoInicial ou onClose muda
 
+  // Efeito para carregar dados do pet selecionado
   useEffect(() => {
-    if (petSelecionado && !modoCadastro) {
+    if (petSelecionado && !modoCadastro) { // Se um pet for selecionado e não estiver no modo de cadastro
       console.log('Pet Selecionado:', petSelecionado); // Depuração
       setNome(petSelecionado.nome || '');
       setSexo(petSelecionado.sexo || '');
       setDataNascimento(petSelecionado.data_nascimento || '');
       setPorte(petSelecionado.porte || '');
       setRaca(petSelecionado.raca || '');
-      /*if (petSelecionado.idade) {
-        const idadeParts = petSelecionado.idade.split(' ');
-        if (idadeParts.length === 2) {
-          setIdade(idadeParts[0]);
-          setUnidadeIdade(idadeParts[1]);
-        }
-      }*/
 
       if (petSelecionado.foto) {
         setFotoAtual(petSelecionado.foto);
@@ -88,66 +76,63 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         setFotoPreview('');
       }
     } else if (modoCadastro) {
+      // Limpa o formulário no modo de cadastro
       setNome('');
       setSexo('');
       setDataNascimento('');
       setPorte('');
       setRaca('');
-      //setIdade('');
-      //setUnidadeIdade('anos');
       setFoto(null);
       setFotoAtual('');
       setFotoPreview('');
     }
   }, [petSelecionado, modoCadastro]);
 
-  /*const handleIdadeChange = (event) => {
-    const valor = event.target.value.replace(/\D/g, '');
-    if (valor.length <= 2 && valor !== '0' && valor !== '00') {
-      setIdade(valor);
-    }
-  };*/
-
+  // Função para gerenciar upload de foto
   const handleFotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFoto(file);
-      setFotoPreview(URL.createObjectURL(file));
+      setFoto(file); // Armazena o arquivo
+      setFotoPreview(URL.createObjectURL(file)); // Cria URL para o preview
     }
   };
 
+  // Função para selecionar um pet da lista
   const handleSelecionarPet = (pet) => {
     setPetSelecionado(pet);
-    setModoSelecao(false);
-    setModoCadastro(false);
+    setModoSelecao(false); // Desativa o modo de seleção
+    setModoCadastro(false); // Desativa o modo de cadastro, entra no edição do pet que foi selecionado
   };
 
+  // Função para voltar à tela de seleção
   const handleVoltarParaSelecao = () => {
-    setModoSelecao(true);
+    setModoSelecao(true); // Ativa o modo de seleção
     setPetSelecionado(null);
     setModoCadastro(false);
     setFoto(null);
     setFotoPreview('');
   };
 
+  // Função para iniciar o cadastro de um novo pet
   const handleNovoPet = () => {
     setModoSelecao(false);
     setModoCadastro(true);
     setPetSelecionado(null);
   };
 
+  // Função para abrir o modal de confirmação de exclusão
   const handleDeletePet = (pet) => {
-    console.log('Pet para exclusão:', pet); // Verifique se o pet tem ID
+    console.log('Pet para exclusão:', pet); // Verifica se o pet tem ID
     setPetToDelete(pet);
-    setShowDeleteConfirm(true);
+    setShowDeleteConfirm(true); // Abre o modal de confirmação
   };
 
+  // Função para confirmar a exclusão do pet
   const confirmDeletePet = async () => {
     setCarregando(true);
-   // setTimeout(async () => {
     try {
       console.log('Tentando excluir pet com ID:', petToDelete.id); // Log para depuração
-      const response = await fetch(`/api/deletarpet?pet_id=${petToDelete.id}`, {
+      const response = await fetch(`/api/deletarpet?pet_id=${petToDelete.id}`, { // Manda pro backend o ID do pet a ser excluído e deleta
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -159,8 +144,8 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       }
   
       // Se a exclusão for bem-sucedida, notifica o componente pai
-      onDelete(petToDelete.id);
-      setShowDeleteConfirm(false);
+      onDelete(petToDelete.id); 
+      setShowDeleteConfirm(false); // Fecha o modal de confirmação
       setPetToDelete(null);
       setModoSelecao(true); // Volta para seleção após exclusão
     } catch (error) {
@@ -169,22 +154,19 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     } finally {
       setCarregando(false);
     }
- // }, 1000); // <- atraso de 800ms
   };
 
+  // Função para enviar o formulário (cadastro ou edição)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCarregando(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    //const idadeFormatada = idade === '1' ? `${idade} ${unidadeIdade.replace(/s$/, '')}` : `${idade} ${unidadeIdade}`;
+    await new Promise(resolve => setTimeout(resolve, 300)); // Pequeno atraso para feedback visual
 
     try {
       const formData = new FormData();
       formData.append('nome', nome);
       formData.append('sexo', sexo);
       formData.append('data_nascimento', dataNascimento);
-     // formData.append('idade', `${idade} ${unidadeIdade}`);
-      //formData.append('idade', idadeFormatada);
       formData.append('porte', porte);
       formData.append('raca', raca || '');
       if (foto) {
@@ -195,9 +177,11 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       let updatedPet = {};
 
       if (modoCadastro) {
+        // Modo cadastro: inclui usuario_id do localStorag
         formData.append('usuario_id', localStorage.getItem('usuario_id'));
-        url = '/api/cadastropet';
+        url = '/api/cadastropet'; // URL para cadastro de pet
       } else {
+        // Modo edição: inclui pet_id e foto atual (se não houver nova foto)
         formData.append('pet_id', petSelecionado.id);
         if (!foto) formData.append('fotoAtual', fotoAtual);
         url = '/api/alterarpet';
@@ -217,15 +201,15 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       console.log('Resposta da API de cadastro:', data); // Log para verificar o que o backend retorna
 
         if (modoCadastro) {
+          // Cria objeto para o novo pet
           updatedPet = {
             id: data.petId,
             nome,
             sexo,
             data_nascimento: dataNascimento,
-           // idade: idadeFormatada,
             porte,
             raca: raca || null,
-            foto: data.foto || null, // Mantém o caminho relativo (ex.: "/uploads/...")
+            foto: data.foto || null, // Mantém o caminho relativo ("/uploads/")
           };
           console.log('updatedPet após cadastro:', updatedPet); // Verifica se o id está presente
           setFotoPreview(data.foto ? `${BASE_URL}${data.foto}` : ''); // Preview com BASE_URL para o modal
@@ -234,16 +218,12 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
           if (fileInputRef.current) {
             fileInputRef.current.value = ''; // Limpa o valor do input
           }
-          //setPetSelecionado(updatedPet); // Mantém o pet no estado
-          //setModoCadastro(false); // Sai do modo de cadastro
-          //setModoSelecao(false);
         } else {
           updatedPet = {
             id: petSelecionado.id,
             nome,
             sexo,
             data_nascimento: dataNascimento,
-            //idade: idadeFormatada,
             porte,
             raca: raca || null,
             foto: data.pet.foto || fotoAtual, // Mantém o caminho relativo
@@ -252,14 +232,9 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         }
 
       console.log('Pet processado:', updatedPet);
-      onSave(updatedPet);
-      onClose();
+      onSave(updatedPet); // Notifica o componente pai com o pet atualizado
+      onClose(); // Fecha o modal após salvar
 
-        // Limpa o estado após salvar
-     // setPetSelecionado(null);
-      //setModoSelecao(true); // Volta para o modo de seleção
-      //setModoCadastro(false);
-      //onClose();
     } catch (error) {
       console.error('Erro ao processar pet:', error);
       alert(`Erro ao processar pet: ${error.message}`);
@@ -268,7 +243,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     }
   };
 
-  // Função para calcular a idade
+  // Função para calcular a idade, mesma coisa do cadastro pet
   const calcularIdade = (dataNascimento) => {
     const hoje = new Date();
     const nascimento = new Date(dataNascimento);
@@ -288,8 +263,10 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     return anos > 0 ? `${anos} ${anos === 1 ? 'ano' : 'anos'}` : `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
   };
 
+// -------------------------------------- // -------------------------------------- //  
   return (
     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Cabeçalho do modal */}
       <div className="bg-red-400 text-white p-4 rounded-t-lg flex justify-between items-center">
         <h3 className="text-xl font-bold">
           {modoSelecao ? 'Selecionar Pet para Editar' : modoCadastro ? 'Cadastrar Novo Pet' : 'Editar Pet'}
@@ -302,21 +279,22 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       </div>
 
       <div className="p-6">
-      {modoSelecao ? (
+      {modoSelecao ? ( // Se estiver no modo de seleção, exibe a lista de pets
             <div className="space-y-4">
               <h4 className="text-lg font-medium text-gray-800">Selecione o pet que deseja editar:</h4>
               {pets && pets.length > 0 ? (
                 <div className="space-y-3">
                   {pets.map(pet => (
                     <div
-                      key={pet.id}
+                      key={pet.id} // Usa o ID do pet como chave
                       className="p-4 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-between"
                     >
                       <div
                         className="flex items-center gap-4 cursor-pointer"
-                        onClick={() => handleSelecionarPet(pet)}
+                        onClick={() => handleSelecionarPet(pet)} // Seleciona o pet ao clicar
                       >
                         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-200 bg-gray-100 flex items-center justify-center">
+                          {/* Exibe a foto do pet ou um ícone padrão se não houver foto */}
                           {pet.foto ? (
                             <img
                               src={`${BASE_URL}${pet.foto}`}
@@ -331,14 +309,14 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                           )}
                         </div>
                         <div>
-                          <h5 className="font-medium">{pet.nome}</h5>
-                          <p className="text-sm text-gray-600">{pet.porte} • {pet.data_nascimento ? calcularIdade(pet.data_nascimento) : 'Não informado'}</p>
+                          <h5 className="font-medium">{pet.nome}</h5> {/* Nome do pet */}
+                          <p className="text-sm text-gray-600">{pet.porte} • {pet.data_nascimento ? calcularIdade(pet.data_nascimento) : 'Não informado'}</p> {/* Idade do pet */}
                         </div>
                       </div>
                       <button
                         onClick={(e) => {
-                          e.stopPropagation(); // Impede que o clique no botão acione a seleção do pet
-                          handleDeletePet(pet);
+                          e.stopPropagation(); // Evita selecionar o pet ao clicar em excluir
+                          handleDeletePet(pet); // Abre o modal de confirmação de exclusão
                         }}
                         className="text-red-500 hover:text-red-700"
                       >
@@ -369,13 +347,14 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
             ) : (
               <p className="text-gray-600">Nenhum pet cadastrado.</p>
             )}
+            
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            {modoInicial === 'edicao' && (
+            {modoInicial === 'edicao' && ( // Se estiver no modo de edição, exibe o botão para voltar
               <button
                 type="button"
-                onClick={handleVoltarParaSelecao}
+                onClick={handleVoltarParaSelecao} // Volta para seleção de pets
                 className="mb-4 flex items-center text-red-500 hover:text-red-600"
               >
                 <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +363,8 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                 Voltar para seleção
               </button>
             )}
-
+   
+            {/* Campo de upload de foto */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Foto do Pet</label>
               <div className="flex items-center gap-4">
@@ -412,6 +392,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               )}
             </div>
 
+            {/* Campo de nome */}
             <div className="mb-4">
               <label htmlFor="nomePet" className="block text-sm font-medium text-gray-700">
                 Nome<span className="text-red-500">*</span>
@@ -427,6 +408,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               />
             </div>
 
+            {/* Campo de genero */}
             <div className="mb-4">
               <label htmlFor="sexoPet" className="block text-sm font-medium text-gray-700">
                 Gênero<span className="text-red-500">*</span>
@@ -444,36 +426,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               </select>
             </div>
 
-            {/*<div className="mb-4">
-              <label htmlFor="idadePet" className="block text-sm font-medium text-gray-700">
-                Idade<span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <input
-                    type="text"
-                    id="idadePet"
-                    value={idade}
-                    onChange={handleIdadeChange}
-                    placeholder="Idade"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                    required
-                  />
-                </div>
-                <div>
-                  <select
-                    value={unidadeIdade}
-                    onChange={(e) => setUnidadeIdade(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
-                    required
-                  >
-                    <option value="anos">{idade === '1' ? 'Ano' : 'Anos'}</option>
-                    <option value="meses">{idade === '1' ? 'Mês' : 'Meses'}</option>
-                  </select>
-                </div>
-              </div>
-            </div>*/}
-
+            {/* Campo de data de nascimento */}
             <div className="mb-4">
               <label htmlFor="dataNascimento" className="block text-sm font-medium text-gray-700">
                 Data de Nascimento<span className="text-red-500">*</span>
@@ -486,13 +439,14 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 required
               />
-              {dataNascimento && (
+              {dataNascimento && ( // Se a data de nascimento estiver preenchida, exibe a idade calculada
                 <p className={`text-sm mb-2 ${calcularIdade(dataNascimento).includes('Inválida') ? 'text-red-500' : 'text-gray-600'}`}>
                   {calcularIdade(dataNascimento)}
                 </p>
               )}
             </div>
 
+            {/* Campo de porte */}
             <div className="mb-4">
               <label htmlFor="portePet" className="block text-sm font-medium text-gray-700">
                 Porte<span className="text-red-500">*</span>
@@ -511,6 +465,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               </select>
             </div>
 
+            {/* Campo de raça */}
             <div className="mb-6">
               <label htmlFor="racaPet" className="block text-sm font-medium text-gray-700">
                 Raça
@@ -525,6 +480,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
               />
             </div>
 
+            {/* Botões de ação */}
             <div className="flex justify-end gap-4">
               <button
                 type="button"

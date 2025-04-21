@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
-import Menu from "../components/Menu";
-import ComentariosModal from "../components/comentariosmodal";
+import Menu from "../components/Menu"; // Importando o componente Menu
+import ComentariosModal from "../components/comentariosmodal"; // Importando o componente ComentariosModal 
+import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscritos
 
 const EventosCriados = () => {
-  const [eventos, setEventos] = useState([]);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [modalFormAberto, setModalFormAberto] = useState(false);
-  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
-  const [modalComentariosAberto, setModalComentariosAberto] = useState(false);
-  const [eventoSelecionado, setEventoSelecionado] = useState(null);
-  const [eventoParaExcluir, setEventoParaExcluir] = useState(null);
-  const [idEventoComentarios, setIdEventoComentarios] = useState(null);
-  const [isEdicao, setIsEdicao] = useState(false);
-  const [imageErrors, setImageErrors] = useState({});
-  const idUsuario = localStorage.getItem("usuario_id");
+  const [eventos, setEventos] = useState([]); // Lista de eventos criados
+  const [modalAberto, setModalAberto] = useState(false); // Modal de detalhes do evento
+  const [modalFormAberto, setModalFormAberto] = useState(false); // Modal de criação/edição de evento
+  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false); // Modal de confirmação de exclusão
+  const [modalComentariosAberto, setModalComentariosAberto] = useState(false); // Modal de comentários
+  const [modalInscritosAberto, setModalInscritosAberto] = useState(false); // Modal de inscritos
+  const [idEventoInscritos, setIdEventoInscritos] = useState(null); // ID do evento para inscritos
+  const [eventoSelecionado, setEventoSelecionado] = useState(null); // Evento selecionado para edição ou detalhes
+  const [eventoParaExcluir, setEventoParaExcluir] = useState(null); // Evento selecionado para exclusão
+  const [idEventoComentarios, setIdEventoComentarios] = useState(null); // ID do evento para comentários
+  const [isEdicao, setIsEdicao] = useState(false); // Modo de edição
+  const [imageErrors, setImageErrors] = useState({}); // Erros de imagem
 
+  const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
+
+  // Estado inicial do formulário
   const [formData, setFormData] = useState({
     nome: "",
     data_inicio: "",
@@ -32,12 +37,13 @@ const EventosCriados = () => {
     porte: "Geral",
     sexo: "Geral",
   });
-  const [foto, setFoto] = useState(null);
+  const [foto, setFoto] = useState(null); // Foto do evento
   const [fotoPreview, setFotoPreview] = useState("");
   const [cidades, setCidades] = useState([]);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
 
+  // Lista de estados brasileiros
   const estados = [
     { uf: "AC", nome: "Acre" },
     { uf: "AL", nome: "Alagoas" },
@@ -68,21 +74,22 @@ const EventosCriados = () => {
     { uf: "TO", nome: "Tocantins" },
   ];
 
+  // Função para buscar eventos criados pelo usuário
   const fetchEventos = async () => {
     if (!idUsuario) {
       setErro("Você precisa estar logado para ver seus eventos.");
       return;
     }
     try {
-      const response = await fetch("/api/consultareventoscriados", {
+      const response = await fetch("/api/consultareventoscriados", { // API para buscar eventos criados
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_usuario: idUsuario }),
+        body: JSON.stringify({ id_usuario: idUsuario }), // Enviando ID do usuário
       });
       if (!response.ok) {
         throw new Error(`Erro ${response.status}: ${await response.text()}`);
       }
-      const data = await response.json();
+      const data = await response.json(); // Convertendo resposta para JSON
       console.log("Eventos recebidos:", data);
       setEventos(data);
       setErro("");
@@ -93,6 +100,7 @@ const EventosCriados = () => {
     }
   };
 
+  // Função para buscar cidades com base na UF selecionada
   const fetchCidades = async (uf) => {
     try {
       console.log("Consultando cidades para UF:", uf);
@@ -103,8 +111,8 @@ const EventosCriados = () => {
       });
       if (!response.ok) throw new Error("Erro ao buscar cidades");
       const data = await response.json();
-      const cidadesNormalizadas = Array.isArray(data)
-        ? data.map((cidade) => ({
+      const cidadesNormalizadas = Array.isArray(data) // Normaliza os dados de cidades
+        ? data.map((cidade) => ({ // Cria um novo array com os dados normalizados
             id: cidade.id || cidade.idCidade || cidade.ID,
             nome: cidade.nome || cidade.nomeCidade || cidade.Nome || "",
           }))
@@ -116,42 +124,48 @@ const EventosCriados = () => {
     }
   };
 
+  // Efeito para buscar eventos ao carregar o componente
   useEffect(() => {
     fetchEventos();
   }, []);
 
+  // Efeito para buscar cidades quando a UF muda
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target; // Obtendo o nome e valor do campo
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Se o campo alterado for o estado (uf), reseta a cidade e busca novas cidades
     if (name === "uf") {
-      setFormData((prev) => ({ ...prev, id_cidade: "" }));
+      setFormData((prev) => ({ ...prev, id_cidade: "" })); // prev é o estado anterior
       if (value) {
         fetchCidades(value);
       } else {
-        setCidades([]);
+        setCidades([]); // Se não houver UF, reseta as cidades
       }
     }
   };
 
+  // Função para lidar com a mudança/selção de foto
   const handleFotoChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files[0]; // Obtendo o arquivo selecionado
     if (file) {
       setFoto(file);
-      setFotoPreview(URL.createObjectURL(file));
+      setFotoPreview(URL.createObjectURL(file)); // Cria um URL temporário para a imagem
     }
   };
 
+  // Função para lidar com erros de imagem
   const handleImageError = (eventoId, foto) => {
     console.error("Erro ao carregar imagem:", foto);
     setImageErrors((prev) => ({ ...prev, [eventoId]: true }));
   };
 
+  // Função para lidar com o envio do formulário
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Previne o recarregamento da página
     setMensagem("");
     setErro("");
 
-    if (
+    if ( // Verifica se todos os campos obrigatórios estão preenchidos
       !formData.nome ||
       !formData.data_inicio ||
       !formData.hora_inicio ||
@@ -168,32 +182,34 @@ const EventosCriados = () => {
       return;
     }
 
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dataInicio = new Date(`${formData.data_inicio}T${formData.hora_inicio}:00`);
-    if (dataInicio < hoje) {
+    // Verifica se a data de início NÃO É ANTERIOR AO DIA DE HOJE
+    const hoje = new Date(); // Cria um objeto Date com a data atual
+    hoje.setHours(0, 0, 0, 0); // Zera as horas, minutos, segundos e milissegundos
+    const dataInicio = new Date(`${formData.data_inicio}T${formData.hora_inicio}`); // Cria um objeto Date com a data e hora de início
+    if (dataInicio < hoje) { // Verifica se a data de início é anterior ao dia atual
       setErro("A data de início não pode ser anterior ao dia atual.");
       return;
     }
 
-    const dataFim = new Date(`${formData.data_fim}T${formData.hora_fim}:00`);
-    if (dataFim < dataInicio) {
+    const dataFim = new Date(`${formData.data_fim}T${formData.hora_fim}`); // Cria um objeto Date com a data e hora de fim
+    if (dataFim < dataInicio) { // Verifica se a data de fim é anterior à data de início
       setErro("A data de fim não pode ser anterior à data de início.");
       return;
     }
 
     try {
+      // Cria um objeto FormData para enviar os dados do formulário e a imagem
       const formDataToSend = new FormData();
       formDataToSend.append("id_usuario", idUsuario);
       if (foto) {
         formDataToSend.append("fotoPet", foto);
         console.log("Enviando nova foto:", foto.name);
-      } else if (!isEdicao) {
+      } else if (!isEdicao) {  // Se não for edição e não houver foto, adiciona uma string vazia
         formDataToSend.append("fotoPet", "");
       }
       formDataToSend.append("nome_evento", formData.nome);
-      formDataToSend.append("inicio", `${formData.data_inicio}T${formData.hora_inicio}:00`);
-      formDataToSend.append("fim", `${formData.data_fim}T${formData.hora_fim}:00`);
+      formDataToSend.append("inicio", `${formData.data_inicio}T${formData.hora_inicio}`);
+      formDataToSend.append("fim", `${formData.data_fim}T${formData.hora_fim}`);
       formDataToSend.append("uf", formData.uf);
       formDataToSend.append("id_cidade", formData.id_cidade);
       formDataToSend.append("bairro", formData.bairro);
@@ -206,8 +222,9 @@ const EventosCriados = () => {
       formDataToSend.append("sexo", formData.sexo);
       if (isEdicao) formDataToSend.append("evento_id", eventoSelecionado.id);
 
+      // Envia os dados para a API de criação ou edição de evento com uma condicional de se está editando ou criando um novo evento
       const url = isEdicao ? "/api/alterarevento" : "/api/criarevento";
-      const response = await fetch(url, {
+      const response = await fetch(url, { // Aqui completa com o endpoint correto
         method: "POST",
         body: formDataToSend,
       });
@@ -215,13 +232,13 @@ const EventosCriados = () => {
       const data = await response.json();
       if (response.ok) {
         console.log("Resposta da API:", data);
-        fecharModalForm();
-        fecharModal();
+        fecharModalForm(); // Fecha o modal de criação/edição
+        fecharModal(); // Fecha o modal de detalhes
         setMensagem(isEdicao ? "Alterações salvas com sucesso!" : "Evento criado com sucesso!");
         fetchEventos();
-        setTimeout(() => setMensagem(""), 3000);
+        setTimeout(() => setMensagem(""), 3000); // Atraso de 3 segundos para limpar a mensagem
       } else {
-        setErro(data.error || `Erro ao ${isEdicao ? "atualizar" : "criar"} evento.`);
+        setErro(data.error || `Erro ao ${isEdicao ? "atualizar" : "criar"} evento.`); // Mensagem de erro dependendo se é edição ou criação
       }
     } catch (error) {
       console.error(`Erro ao ${isEdicao ? "atualizar" : "criar"} evento:`, error);
@@ -229,17 +246,19 @@ const EventosCriados = () => {
     }
   };
 
+  // Função para lidar com a exclusão de eventos
   const handleExcluir = (evento) => {
     setEventoParaExcluir(evento);
     setModalConfirmacaoAberto(true);
   };
 
+  // Função para confirmar a exclusão do evento
   const confirmarExclusao = async () => {
     try {
       const response = await fetch("/api/excluirevento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ evento_id: eventoParaExcluir.id, id_usuario: idUsuario }),
+        body: JSON.stringify({ evento_id: eventoParaExcluir.id, id_usuario: idUsuario }), // Enviando ID do evento e do usuário
       });
 
       const data = await response.json();
@@ -248,7 +267,7 @@ const EventosCriados = () => {
         fecharModal();
         setMensagem("Evento excluído com sucesso!");
         fetchEventos();
-        setTimeout(() => setMensagem(""), 3000);
+        setTimeout(() => setMensagem(""), 3000); // Atraso de 3 segundos para limpar a mensagem
       } else {
         setErro(data.error || "Erro ao excluir evento.");
       }
@@ -258,32 +277,37 @@ const EventosCriados = () => {
     }
   };
 
+  // Função para fechar o modal de confirmação de exclusão
   const fecharModalConfirmacao = () => {
     setModalConfirmacaoAberto(false);
     setEventoParaExcluir(null);
   };
 
+  // Função para abrir o modal de detalhes do evento
   const abrirModal = (evento) => {
     setEventoSelecionado(evento);
     setModalAberto(true);
   };
 
+  // Função para fechar o modal de detalhes do evento
   const fecharModal = () => {
     setModalAberto(false);
     setEventoSelecionado(null);
   };
 
+  // Função para abrir o modal de criação de evento
   const abrirModalCriar = () => {
     if (!idUsuario) {
       setErro("Você precisa estar logado para criar um evento.");
       return;
     }
-    setIsEdicao(false);
-    setModalFormAberto(true);
+    setIsEdicao(false); // Define que não está em modo de edição
+    setModalFormAberto(true); // Abre o modal de criação
   };
 
+  // Função para abrir o modal de edição de evento
   const abrirModalEditar = () => {
-    if (!idUsuario) {
+    if (!idUsuario) { // Verifica se o usuário está logado
       setErro("Você precisa estar logado para editar um evento.");
       return;
     }
@@ -291,10 +315,10 @@ const EventosCriados = () => {
     const fim = new Date(eventoSelecionado.fim);
     setFormData({
       nome: eventoSelecionado.nome,
-      data_inicio: inicio.toISOString().split("T")[0],
-      hora_inicio: inicio.toTimeString().slice(0, 5),
-      data_fim: fim.toISOString().split("T")[0],
-      hora_fim: fim.toTimeString().slice(0, 5),
+      data_inicio: inicio.toISOString().split("T")[0], // Formato YYYY-MM-DD
+      hora_inicio: inicio.toTimeString().slice(0, 5), // Formato HH:MM
+      data_fim: fim.toISOString().split("T")[0], // Formato YYYY-MM-DD
+      hora_fim: fim.toTimeString().slice(0, 5), // Formato HH:MM
       uf: eventoSelecionado.uf,
       id_cidade: eventoSelecionado.id_cidade,
       bairro: eventoSelecionado.bairro,
@@ -310,13 +334,14 @@ const EventosCriados = () => {
     setFotoPreview(eventoSelecionado.foto || "");
     setFoto(null);
     fetchCidades(eventoSelecionado.uf);
-    setIsEdicao(true);
-    setModalAberto(false);
+    setIsEdicao(true); // Define que está em modo de edição
+    setModalAberto(false); // Fecha o modal de detalhes
     setModalFormAberto(true);
   };
 
+  // Função para fechar o modal de criação/edição de evento
   const fecharModalForm = () => {
-    setModalFormAberto(false);
+    setModalFormAberto(false); // Fecha o modal de criação/edição
     setFormData({
       nome: "",
       data_inicio: "",
@@ -341,25 +366,47 @@ const EventosCriados = () => {
     setIsEdicao(false);
   };
 
+  // Função para abrir o modal de comentários
   const abrirModalComentarios = (idEvento) => {
     console.log("Abrindo modal para idEvento:", idEvento);
-    setIdEventoComentarios(idEvento);
-    setModalComentariosAberto(true);
+    setIdEventoComentarios(idEvento); // Define o ID do evento para comentários
+    setModalComentariosAberto(true); // Abre o modal de comentários
   };
 
+  // Função para fechar o modal de comentários
   const fecharModalComentarios = () => {
     setModalComentariosAberto(false);
     setIdEventoComentarios(null);
   };
 
-  const hoje = new Date().toISOString().split("T")[0];
+  // Função para abrir o modal de inscritos
+  const abrirModalInscritos = (idEvento) => {
+    console.log("Abrindo ModalInscritos com idEvento:", idEvento);
+    if (!idEvento) {
+      console.error("idEvento está indefinido ou null");
+      setErro("Erro: Nenhum evento selecionado.");
+      return;
+    }
+    setIdEventoInscritos(idEvento);
+    setModalInscritosAberto(true);
+  };
 
+  // Função para fechar o modal de inscritos
+  const fecharModalInscritos = () => {
+    setModalInscritosAberto(false);
+    setIdEventoInscritos(null);
+  };
+
+  const hoje = new Date().toISOString().split("T")[0]; // Data atual no formato YYYY-MM-DD
+
+  // ********* Renderização do componente ********* //
   return (
     <div className="min-h-screen">
-      <Menu />
+      <Menu /> {/* Componente de menu superior importado */}
       <div className="pt-24 px-6 pb-8 max-w-5xl mx-auto">
         <div className="flex items-center gap-2 mb-10">
           <h1 className="text-4xl font-bold text-blue-900">Eventos Criados</h1>
+          {/* Ícone SVG para decoração */}
           <svg
             className="w-8 h-8 text-blue-900"
             fill="currentColor"
@@ -371,26 +418,29 @@ const EventosCriados = () => {
           </svg>
         </div>
 
+        {/* Exibe mensagens de sucesso */}
         {mensagem && (
           <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
             {mensagem}
           </div>
         )}
+        {/* Exibe mensagens de erro */}
         {erro && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
             {erro}
           </div>
         )}
 
+        {/* Exibe eventos criados */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-4">
           {eventos.length > 0 ? (
-            eventos.map((evento) => (
+            eventos.map((evento) => ( // Mapeia os eventos criados
               <div
                 key={evento.id}
                 className="bg-white p-6 rounded-lg shadow-md"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"}
+                  src={evento.foto || "https://via.placeholder.com/150"} 
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
                   onError={() => handleImageError(evento.id, evento.foto)}
@@ -402,7 +452,8 @@ const EventosCriados = () => {
                   Inscritos: {evento.total_inscritos || 0}
                 </p>
                 <p className="text-gray-600">
-                  {new Date(evento.inicio).toLocaleDateString("pt-BR")} -{" "}
+                  {/* Formata a data de início e fim do evento */}
+                  {new Date(evento.inicio).toLocaleDateString("pt-BR")} -{" "} 
                   {new Date(evento.fim).toLocaleDateString("pt-BR")}
                 </p>
                 <p className="text-gray-600">
@@ -426,6 +477,7 @@ const EventosCriados = () => {
         </div>
       </div>
 
+      {/* Botão para criar novo evento */}
       <button
         onClick={abrirModalCriar}
         className="fixed bottom-8 right-8 bg-red-500 text-white py-3 px-6 rounded-full shadow-lg hover:bg-red-600 transition flex items-center gap-2 z-50"
@@ -444,6 +496,7 @@ const EventosCriados = () => {
         Criar Evento
       </button>
 
+      {/* Modal para exibir detalhes do evento */}
       {modalAberto && eventoSelecionado && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
@@ -451,7 +504,7 @@ const EventosCriados = () => {
         >
           <div
             className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Previne o fechamento do modal ao clicar dentro dele
           >
             <button
               onClick={fecharModal}
@@ -508,20 +561,30 @@ const EventosCriados = () => {
                 </div>
               </div>
               <div className="flex-1 space-y-2 text-gray-700">
+                <div className="flex items-center gap-2">
                 <p>
                   <strong>Inscritos:</strong> {eventoSelecionado.total_inscritos || 0}
                 </p>
+                <button
+                    onClick={() => abrirModalInscritos(eventoSelecionado.id)}
+                    className="text-blue-900 hover:text-blue-700 text-sm underline"
+                    title="Ver inscritos"
+                  >
+                    Ver Inscritos
+                  </button>
+                </div>
                 <p>
                   <strong>Data de Início:</strong>{" "}
-                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
-                  {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
+                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")} às{" "}
+                 {eventoSelecionado.inicio_formatado}
                 </p>
                 <p>
                   <strong>Data de Fim:</strong>{" "}
-                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
-                  {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
+                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")} às{" "}
+                  {eventoSelecionado.fim_formatado}
                 </p>
                 <p>
+                  {/* Formata a data de início e fim do evento */}
                   <strong>Local:</strong> {eventoSelecionado.rua}, {eventoSelecionado.numero}
                   {eventoSelecionado.complemento
                     ? `, ${eventoSelecionado.complemento}`
@@ -566,6 +629,7 @@ const EventosCriados = () => {
         </div>
       )}
 
+      {/* Modal de confirmação de exclusão */}
       {modalConfirmacaoAberto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
@@ -881,6 +945,14 @@ const EventosCriados = () => {
         isOpen={modalComentariosAberto}
         onClose={fecharModalComentarios}
       />
+
+      {modalInscritosAberto && idEventoInscritos && (
+      <ModalInscritos
+        eventoId={idEventoInscritos}
+        onClose={fecharModalInscritos}
+      />
+      )}
+
     </div>
   );
 };

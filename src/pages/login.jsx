@@ -27,6 +27,7 @@ function Login() {
 
       if (response.ok) {
         // Salva o token ou dados do usuário no localStorage
+        // Isso vai la para o menu para aparecer o Olá (nome do usuário)
         localStorage.setItem('usuario_id', data.usuario_id);
         localStorage.setItem('email', email);
         localStorage.setItem('usuarioNome', data.nome);

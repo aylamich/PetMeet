@@ -1,26 +1,28 @@
 import { useState, useEffect } from "react";
-import Menu from "../components/Menu";
-import ComentariosModal from "../components/comentariosmodal";
-import ModalInscritos from "../components/modalinscritos";
+import Menu from "../components/Menu"; // Importando o componente Menu
+import ComentariosModal from "../components/comentariosmodal"; // Importando o componente ComentariosModal
+import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscritos
 
 const EventosInscritos = () => {
-  const [filtro, setFiltro] = useState("em_breve");
-  const [eventos, setEventos] = useState([]);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [eventoSelecionado, setEventoSelecionado] = useState(null);
-  const [modalComentariosAberto, setModalComentariosAberto] = useState(false);
-  const [idEventoComentarios, setIdEventoComentarios] = useState(null);
-  const [modalInscritosAberto, setModalInscritosAberto] = useState(false);
-  const [idEventoInscritos, setIdEventoInscritos] = useState(null);
-  const [erro, setErro] = useState("");
-  const [mensagem, setMensagem] = useState("");
+  const [filtro, setFiltro] = useState("em_breve"); // Estado para o filtro de eventos, inicia no modo "em_breve"
+  const [eventos, setEventos] = useState([]); // Lista de eventos inscritos
+  const [modalAberto, setModalAberto] = useState(false); // Estado para controlar a abertura do modal de detalhes do evento
+  const [eventoSelecionado, setEventoSelecionado] = useState(null); // Estado para armazenar o evento selecionado
+  const [modalComentariosAberto, setModalComentariosAberto] = useState(false); // Controla a abertura do modal de comentários
+  const [idEventoComentarios, setIdEventoComentarios] = useState(null); // ID do evento para o modal de comentários
+  const [modalInscritosAberto, setModalInscritosAberto] = useState(false); // Controla a abertura do modal de inscritos
+  const [idEventoInscritos, setIdEventoInscritos] = useState(null); // ID do evento para o modal de inscritos
+  const [erro, setErro] = useState(""); // Mensagem de erro
+  const [mensagem, setMensagem] = useState(""); // Mensagem de sucesso
   const [cidades, setCidades] = useState([]);
-  const idUsuario = localStorage.getItem("usuario_id");
 
+  const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
+
+  // Função para buscar eventos inscritos do usuário
   const fetchEventosInscritos = async () => {
-    if (!idUsuario) {
+    if (!idUsuario) { // Verifica se o usuário está logado
       setErro("Você precisa estar logado para ver seus eventos inscritos.");
-      setEventos([]);
+      setEventos([]); // Limpa a lista de eventos
       return;
     }
 
@@ -28,7 +30,7 @@ const EventosInscritos = () => {
       const response = await fetch("/api/eventosInscritos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuario_id: idUsuario, filtro }),
+        body: JSON.stringify({ usuario_id: idUsuario, filtro }), // Envia o ID do usuário e o filtro selecionado
       });
 
       if (!response.ok) {
@@ -44,8 +46,9 @@ const EventosInscritos = () => {
     }
   };
 
+  // Função para desinscrever o usuário de um evento
   const handleDesinscrever = async (evento_id) => {
-    if (!idUsuario) {
+    if (!idUsuario) { // Verifica se o usuário está logado
       setErro("Você precisa estar logado para desinscrever.");
       setTimeout(() => setErro(""), 3000);
       return;
@@ -74,29 +77,31 @@ const EventosInscritos = () => {
     }
   };
 
+  // Função para buscar cidades com base na UF selecionada
   const fetchCidades = async (uf) => {
     try {
       console.log("Consultando cidades para UF:", uf);
       const response = await fetch("/api/consultacidadeporUF", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ufSelecionado: uf }),
+        body: JSON.stringify({ ufSelecionado: uf }), // Envia a UF selecionada
       });
       if (!response.ok) throw new Error("Erro ao buscar cidades");
-      const data = await response.json();
-      const cidadesNormalizadas = Array.isArray(data)
-        ? data.map((cidade) => ({
+      const data = await response.json(); // Recebe a lista de cidades
+      const cidadesNormalizadas = Array.isArray(data) // Verifica se o retorno é um array
+        ? data.map((cidade) => ({ // Normaliza os dados para um objeto padronizando os campos
             id: cidade.id || cidade.idCidade || cidade.ID,
             nome: cidade.nome || cidade.nomeCidade || cidade.Nome || "",
           }))
         : [];
-      setCidades(cidadesNormalizadas);
+      setCidades(cidadesNormalizadas); // Atualiza o estado com a lista de cidades
     } catch (error) {
       console.error("Erro ao buscar cidades:", error);
       setCidades([]);
     }
   };
 
+  // Função para lidar com a mudança na seleção de UF
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "uf") {
@@ -108,53 +113,62 @@ const EventosInscritos = () => {
     }
   };
 
+  // Efeito para buscar eventos inscritos ao carregar o componente ou mudar o filtro
   useEffect(() => {
     fetchEventosInscritos();
   }, [filtro]);
 
+  // Função para abrir o modal de detalhes do evento
   const abrirModal = (evento) => {
     setEventoSelecionado(evento);
     setModalAberto(true);
   };
 
+  // Função para fechar o modal de detalhes do evento
   const fecharModal = () => {
     setModalAberto(false);
     setEventoSelecionado(null);
   };
 
+  // Função para abrir o modal de comentários
   const abrirModalComentarios = (idEvento) => {
     console.log("Abrindo modal para idEvento:", idEvento);
-    setIdEventoComentarios(idEvento);
-    setModalComentariosAberto(true);
+    setIdEventoComentarios(idEvento); // Define o ID do evento para o modal de comentários
+    setModalComentariosAberto(true); // Abre o modal de comentários
   };
 
+  // Função para fechar o modal de comentários
   const fecharModalComentarios = () => {
-    setModalComentariosAberto(false);
-    setIdEventoComentarios(null);
+    setModalComentariosAberto(false); // Fecha o modal de comentários
+    setIdEventoComentarios(null); // Limpa o ID do evento
   };
 
+  // Função para abrir o modal de inscritos
   const abrirModalInscritos = (idEvento) => {
     console.log("Abrindo ModalInscritos com idEvento:", idEvento);
-    if (!idEvento) {
+    if (!idEvento) { // Verifica se o ID do evento está definido
       console.error("idEvento está indefinido ou null");
       setErro("Erro: Nenhum evento selecionado.");
       return;
     }
-    setIdEventoInscritos(idEvento);
-    setModalInscritosAberto(true);
+    setIdEventoInscritos(idEvento); // Define o ID do evento para o modal de inscritos
+    setModalInscritosAberto(true); // Abre o modal de inscritos
   };
 
+  // Função para fechar o modal de inscritos
   const fecharModalInscritos = () => {
-    setModalInscritosAberto(false);
-    setIdEventoInscritos(null);
+    setModalInscritosAberto(false); // Fecha o modal de inscritos
+    setIdEventoInscritos(null); // Limpa o ID do evento
   };
 
+  // ************* Renderiza o componente *************
   return (
     <div className="min-h-screen">
       <Menu />
       <div className="pt-24 px-6 max-w-5xl mx-auto">
         <div className="flex items-center gap-2 mb-10">
           <h1 className="text-4xl font-bold text-blue-900">Eventos Inscritos</h1>
+          {/* Icone patinha */}
           <svg
             className="w-8 h-8 text-blue-900"
             fill="currentColor"
@@ -166,6 +180,7 @@ const EventosInscritos = () => {
           </svg>
         </div>
 
+        {/* Mensagem de erro ou sucesso */}
         {mensagem && (
           <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
             {mensagem}
@@ -177,6 +192,7 @@ const EventosInscritos = () => {
           </div>
         )}
 
+        {/* Filtros para eventos em breve e já acontecidos */}
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setFiltro("em_breve")}
@@ -200,6 +216,7 @@ const EventosInscritos = () => {
           </button>
         </div>
 
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {eventos.length > 0 ? (
             eventos.map((evento) => (
@@ -208,7 +225,7 @@ const EventosInscritos = () => {
                 className="bg-white p-6 rounded-lg shadow-md relative"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"}
+                  src={evento.foto || "https://via.placeholder.com/150"} // Imagem padrão caso não tenha foto
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
                 />
@@ -218,14 +235,14 @@ const EventosInscritos = () => {
                 <p className="text-gray-600 text-sm">
                   Criado por: {evento.nome_usuario || "Desconhecido"}
                 </p>
-                {filtro === "em_breve" && (
+                {/*filtro === "em_breve" && (*/}
                   <p className="text-gray-600 text-sm">
                     Inscritos: {evento.total_inscritos || 0}
                   </p>
-                )}
+          
                 <p className="text-gray-600">
-                  {new Date(evento.inicio).toLocaleDateString("pt-BR")} -{" "}
-                  {new Date(evento.fim).toLocaleDateString("pt-BR")}
+                  {new Date(evento.inicio).toLocaleDateString("pt-BR")} -{" "} {/* Formata a data de início */}
+                  {new Date(evento.fim).toLocaleDateString("pt-BR")} {/* Formata a data de fim */}
                 </p>
                 <p className="text-gray-600">
                   {evento.nome_cidade}, {evento.uf}
@@ -237,6 +254,7 @@ const EventosInscritos = () => {
                   >
                     Ver Detalhes
                   </button>
+           
                   {filtro === "em_breve" && (
                     <button
                       onClick={() => handleDesinscrever(evento.id)}
@@ -263,7 +281,7 @@ const EventosInscritos = () => {
                 </div>
               </div>
             ))
-          ) : (
+          ) : ( // Se não houver eventos inscritos, exibe uma mensagem
             <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500 col-span-full">
               {idUsuario
                 ? "Nenhum evento inscrito ainda."
@@ -273,6 +291,7 @@ const EventosInscritos = () => {
         </div>
       </div>
 
+      {/* Modal de detalhes do evento */}
       {modalAberto && eventoSelecionado && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
@@ -280,7 +299,7 @@ const EventosInscritos = () => {
         >
           <div
             className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Impede o fechamento do modal ao clicar dentro dele
           >
             <button
               onClick={fecharModal}
@@ -301,6 +320,7 @@ const EventosInscritos = () => {
                 />
               </svg>
             </button>
+            {/* Detalhes do evento selecionado */}
             <h2 className="text-2xl font-bold text-blue-900 mb-4">
               {eventoSelecionado.nome}
             </h2>
@@ -340,7 +360,7 @@ const EventosInscritos = () => {
                   <strong>Criado por:</strong>{" "}
                   {eventoSelecionado.nome_usuario || "Desconhecido"}
                 </p>
-                {filtro === "em_breve" && (
+                  {/*filtro === "em_breve" && (*/}
                   <div className="flex items-center gap-2">
                     <p>
                       <strong>Inscritos:</strong> {eventoSelecionado.total_inscritos || 0}
@@ -353,16 +373,16 @@ const EventosInscritos = () => {
                       Ver Inscritos
                     </button>
                   </div>
-                )}
+    
                 <p>
                   <strong>Data de Início:</strong>{" "}
-                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")}{" "}
-                  {new Date(eventoSelecionado.inicio).toLocaleTimeString("pt-BR")}
+                  {new Date(eventoSelecionado.inicio).toLocaleDateString("pt-BR")} às{" "}
+                  {eventoSelecionado.inicio_formatado}
                 </p>
                 <p>
                   <strong>Data de Fim:</strong>{" "}
-                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")}{" "}
-                  {new Date(eventoSelecionado.fim).toLocaleTimeString("pt-BR")}
+                  {new Date(eventoSelecionado.fim).toLocaleDateString("pt-BR")} às{" "}
+                  {eventoSelecionado.fim_formatado}
                 </p>
                 <p>
                   <strong>Local:</strong> {eventoSelecionado.rua}, {eventoSelecionado.numero}
@@ -419,6 +439,7 @@ const EventosInscritos = () => {
         </div>
       )}
 
+      {/* Modal de comentários importado */}
       <ComentariosModal
         idEvento={idEventoComentarios}
         idUsuario={idUsuario}
@@ -426,6 +447,7 @@ const EventosInscritos = () => {
         onClose={fecharModalComentarios}
       />
 
+      {/* Modal de inscritos importado */}
       {modalInscritosAberto && idEventoInscritos && (
         <ModalInscritos
           eventoId={idEventoInscritos}
