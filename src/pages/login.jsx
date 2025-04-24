@@ -29,11 +29,17 @@ function Login() {
         // Salva o token ou dados do usuário no localStorage
         // Isso vai la para o menu para aparecer o Olá (nome do usuário)
         localStorage.setItem('usuario_id', data.usuario_id);
-        localStorage.setItem('email', email);
+        localStorage.setItem('email', email); // Salva o email do formulário
         localStorage.setItem('usuarioNome', data.nome);
+        localStorage.setItem('tipo', data.tipo); // Salva tipo de usuário (admin ou usuario comum)
 
-        // Redireciona para a página de eventos se der tudo certo
-        window.location.href = '/eventosinscritos';
+        // Redireciona com base no tipo do usuário se der tudo certo
+        if (data.tipo === 'usuario') {
+          window.location.href = '/eventosinscritos';
+        } else if (data.tipo === 'adm') {
+          window.location.href = '/gerenciareventos';
+        }
+        
       } else {
         setErro(data.error || 'Erro ao fazer login. Email ou senha inválidos.');
       }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Menu from "../components/Menu"; // Importando o componente Menu
 import ComentariosModal from "../components/comentariosmodal"; // Importando o componente ComentariosModal
-import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscritos
+import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscrito
+import DenunciaModal from "../components/denunciarmodal"; // Importar o componente DenunciaModals
 
 const EventosInscritos = () => {
   const [filtro, setFiltro] = useState("em_breve"); // Estado para o filtro de eventos, inicia no modo "em_breve"
@@ -15,6 +16,7 @@ const EventosInscritos = () => {
   const [erro, setErro] = useState(""); // Mensagem de erro
   const [mensagem, setMensagem] = useState(""); // Mensagem de sucesso
   const [cidades, setCidades] = useState([]);
+  const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para o modal de denúncia
 
   const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
 
@@ -163,6 +165,7 @@ const EventosInscritos = () => {
 
   // ************* Renderiza o componente *************
   return (
+    <>
     <div className="min-h-screen">
       <Menu />
       <div className="pt-24 px-6 max-w-5xl mx-auto">
@@ -293,15 +296,14 @@ const EventosInscritos = () => {
 
       {/* Modal de detalhes do evento */}
       {modalAberto && eventoSelecionado && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
           onClick={fecharModal}
         >
-          <div
-            className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
             onClick={(e) => e.stopPropagation()} // Impede o fechamento do modal ao clicar dentro dele
           >
-            <button
+            <div className="flex justify-between items-center gap-4">
+            <button // Fechar modalBotão fechar modal
               onClick={fecharModal}
               className="fixed top-6 right-6 text-gray-600 hover:text-gray-900 z-10 md:static md:top-4 md:right-4"
             >
@@ -320,6 +322,14 @@ const EventosInscritos = () => {
                 />
               </svg>
             </button>
+            <button // Botão de denunciar evento
+            onClick={() => setMostrarDenunciaModal(true)} // Abre o modal de denúncia
+            className="text-red-600 hover:text-red-900 z-10" title="Denunciar evento">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+            </div>
             {/* Detalhes do evento selecionado */}
             <h2 className="text-2xl font-bold text-blue-900 mb-4">
               {eventoSelecionado.nome}
@@ -455,6 +465,16 @@ const EventosInscritos = () => {
         />
       )}
     </div>
+
+      {/* Modal de denúncia importado */}
+      <DenunciaModal
+          isOpen={mostrarDenunciaModal}
+          onClose={() => setMostrarDenunciaModal(false)}
+          tipo="EVENTO"
+          eventoId={eventoSelecionado?.id}
+          usuarioDenunciadorId={idUsuario}
+        />
+    </>
   );
 };
 

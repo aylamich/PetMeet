@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Menu from "../components/Menu"; // Importando o componente Menu
+import DenunciaModal from "../components/denunciarmodal"; // Importar DenunciaModal
 
 const Explorar = () => {
   const [eventos, setEventos] = useState([]); // Lista de eventos
@@ -19,6 +20,7 @@ const Explorar = () => {
   const [mensagem, setMensagem] = useState(""); // Mensagem de sucesso
   const [erro, setErro] = useState(""); // Mensagem de erro
   const [inscricoes, setInscricoes] = useState({}); // Controle das inscrições do usuário nos eventos
+  const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para DenunciaModal
 
   const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
 
@@ -274,6 +276,7 @@ const Explorar = () => {
 
   // ********* Renderiza o componente ***********
   return (
+    <>
     <div className="min-h-screen">
       <Menu /> {/* Componente de navegação importado */}
       <div className="pt-24 px-6 max-w-5xl mx-auto">
@@ -522,16 +525,14 @@ const Explorar = () => {
 
       {/* Modal de detalhes do evento */}
       {modalAberto && eventoSelecionado && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto"
           onClick={fecharModal}
         >
-          <div
-            className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto relative my-4"
             onClick={(e) => e.stopPropagation()} // Impede fechamento ao clicar dentro
           >
-            <button
-              onClick={fecharModal}
+            <div className="flex justify-between items-center gap-4">
+            <button onClick={fecharModal} // Botão para fechar o modal
               className="fixed top-6 right-6 text-gray-600 hover:text-gray-900 z-10 md:static md:top-4 md:right-4"
             >
               <svg
@@ -549,6 +550,18 @@ const Explorar = () => {
                 />
               </svg>
             </button>
+            
+            {Number(eventoSelecionado.id_usuario) !== Number(idUsuario) && (
+            <button // Botão para denunciar o evento
+            onClick={() => setMostrarDenunciaModal(true)}
+            className="text-red-600 hover:text-red-900 z-10" title="Denunciar evento">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            )}
+            </div>
+
             <h2 className="text-2xl font-bold text-blue-900 mb-4">
               {eventoSelecionado.nome} {/* Nome do evento */}
             </h2>
@@ -630,6 +643,16 @@ const Explorar = () => {
         </div>
       )}
     </div>
+
+    <DenunciaModal
+        isOpen={mostrarDenunciaModal}
+        onClose={() => setMostrarDenunciaModal(false)}
+        tipo="EVENTO"
+        eventoId={eventoSelecionado?.id}
+        usuarioDenunciadorId={idUsuario}
+      />
+
+    </>
   );
 };
 

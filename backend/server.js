@@ -91,7 +91,7 @@ app.post('/api/consultacidadeporUF', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+/*app.post('/api/login', async (req, res) => {
   try {
     // Extrai email e senha do corpo da requisição
     const { email, senha } = req.body;
@@ -107,7 +107,7 @@ app.post('/api/login', async (req, res) => {
     /*Pega a senha em texto puro fornecida (senha, ex.: "minhaSenha123").
     Usa o mesmo salt que está embutido no hash armazenado (usuario.senha). 
     Gera um novo hash a partir da senha fornecida e compara com o hash armazenado.
-    Retorna true se os hashes coincidirem (senha correta) ou false se não (senha incorreta).*/
+    Retorna true se os hashes coincidirem (senha correta) ou false se não (senha incorreta).
     if (!usuario.senha?.startsWith('$2')) {
       console.error("Hash inválido para:", email);
       return res.status(500).json({ error: 'Erro na configuração do servidor' });
@@ -126,6 +126,52 @@ app.post('/api/login', async (req, res) => {
 
   } catch (error) {
     console.error("Erro no login:", error);
+    res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});*/
+
+// Rota para login, conferindo se o usuário é admin ou usuário comum
+app.post('/api/login', async (req, res) => {
+  try {
+    // Extrai email e senha do corpo da requisição
+    const { email, senha } = req.body;
+    console.log('Tentativa de login:', email);
+
+    // Busca usuário por email
+    const usuario = await db.buscarUsuarioPorEmail(email);
+    if (usuario) {
+      // Verifica o hash da senha
+      if (!usuario.senha?.startsWith('$2')) {
+        console.error('Hash inválido para usuário:', email);
+        return res.status(500).json({ error: 'Erro na configuração do servidor' });
+      }
+      const senhaValida = await bcrypt.compare(senha, usuario.senha);
+      if (senhaValida) {
+        console.log('Login bem-sucedido (usuário):', email);
+        return res.json({ usuario_id: usuario.id, nome: usuario.nome_completo, tipo: 'usuario' });
+      }
+    }
+
+    // Busca admin por email
+    const adm = await db.buscarAdminPorEmail(email);
+    if (adm) {
+      // Verifica o hash da senha
+      if (!adm.senha?.startsWith('$2')) {
+        console.error('Hash inválido para admin:', email);
+        return res.status(500).json({ error: 'Erro na configuração do servidor' });
+      }
+      const senhaValida = await bcrypt.compare(senha, adm.senha);
+      if (senhaValida) {
+        console.log('Login bem-sucedido (admin):', email);
+        return res.json({ id: adm.id, nome: adm.nome_completo, tipo: 'adm'
+        });
+      }
+    }
+
+    // Se não encontrou usuário ou admin, ou a senha está inválida
+    return res.status(401).json({ error: 'Credenciais inválidas' });
+  } catch (error) {
+    console.error('Erro no login:', error);
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
@@ -702,6 +748,230 @@ app.get("/api/consultarinscritos", async (req, res) => {
   } catch (error) {
     console.error("Erro ao consultar inscritos:", error);
     res.status(500).json({ error: "Erro ao consultar inscritos" });
+  }
+});
+
+
+// ****************************** MODO ADMIN ****************************** //
+/*app.get("/api/consultausuarios", async (req, res) => {
+  try {
+    console.log('Recebida requisição para /api/consultausuarios');
+    const usuarios = await db.consultaUsuarios();
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Erro na rota /api/consultausuarios:', error.message, error.stack);
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+});*/
+
+// Rota para consultar usuários (atualizada para suportar filtro)
+app.get("/api/consultausuarios", async (req, res) => {
+  try {
+    const filtroDenunciados = req.query.filtro === 'denunciados';
+    const usuarios = await db.consultaUsuarios(filtroDenunciados);
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Erro na rota /consultausuarios:', error);
+    res.status(500).json({ error: 'Erro ao consultar usuários' });
+  }
+});
+
+app.post("/api/cadastraradmin", async (req, res) => {
+  const { nome_completo, email, senha } = req.body;
+
+  if (!nome_completo || !email || !senha) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
+  }
+
+  try {
+    await db.cadastrarAdmin(nome_completo, email, senha);
+    res.json({ message: `Administrador "${nome_completo}" cadastrado com sucesso!` });
+  } catch (error) {
+    console.error("Erro ao cadastrar administrador:", error);
+    res.status(400).json({ error: error.message || "Erro ao cadastrar administrador" });
+  }
+});
+
+// Rota para consultar administradores
+app.get("/api/consultaradmins", async (req, res) => {
+  try {
+    const admins = await db.consultarAdmins();
+    console.log("Requisição para consultar administradores");
+    res.json(admins);
+  } catch (error) {
+    console.error("Erro ao consultar administradores:", error);
+    res.status(500).json({ error: "Erro ao consultar administradores" });
+  }
+});
+
+// Rota para excluir administrador
+app.post("/api/excluiradmin", async (req, res) => {
+  const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ error: "ID do administrador é obrigatório" });
+  }
+
+  try {
+    await db.excluirAdmin(id);
+    res.json({ message: "Administrador excluído com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao excluir administrador:", error);
+    res.status(500).json({ error: "Erro ao excluir administrador" });
+  }
+});
+
+// Rota para atualizar um administrador
+app.post("/api/alteraradmin", async (req, res) => {
+  const { id, nome_completo, email } = req.body;
+
+  if (!id || !nome_completo || !email) {
+    return res.status(400).json({ error: "ID, nome completo e email são obrigatórios" });
+  }
+
+  try {
+    await db.alterarAdmin(id, nome_completo, email);
+    res.json({ message: `Administrador "${nome_completo}" atualizado com sucesso!` });
+  } catch (error) {
+    console.error("Erro ao atualizar administrador:", error);
+    res.status(400).json({ error: error.message || "Erro ao atualizar administrador" });
+  }
+});
+
+// Endpoint para excluir um usuário
+app.post("/api/excluirusuario", async (req, res) => {
+  const { id } = req.body;
+
+  // Validação do ID
+  if (!id) {
+    return res.status(400).json({ error: "ID do usuário é obrigatório." });
+  }
+
+  try {
+    await db.excluirUsuario(id);
+    res.status(200).json({ message: "Usuário excluído com sucesso." });
+  } catch (error) {
+    if (error.message === "Usuário não encontrado") {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+app.post("/api/excluireventoadm", async (req, res) => {
+  console.log("Requisição recebida em /api/excluireventoadm:", req.body);
+  const { evento_id } = req.body;
+
+  if (!evento_id) {
+    console.log("ID inválido:", evento_id);
+    return res.status(400).json({ error: "evento_id é obrigatório e deve ser um número." });
+  }
+
+  try {
+    const deleted = await db.excluirEventoAdm(evento_id);
+    if (deleted) {
+      res.status(200).json({ message: "Evento excluído com sucesso." });
+    } else {
+      res.status(404).json({ error: "Evento não encontrado." });
+    }
+  } catch (error) {
+    console.error("Erro ao excluir evento:", error);
+    if (error.message === "Evento não encontrado") {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+app.post("/api/excluircomentarioadm", async (req, res) => {
+  console.log("Requisição recebida em /api/excluircomentarioadm:", req.body);
+  const { id_comentario } = req.body;
+
+  if (!id_comentario) {
+    console.log("ID inválido:", id_comentario);
+    return res.status(400).json({ error: "id_comentario é obrigatório e deve ser um número." });
+  }
+
+  try {
+    const result = await db.excluirComentarioAdm(id_comentario);
+    res.status(200).json({ message: result.message });
+  } catch (error) {
+    console.error("Erro ao excluir comentário:", error);
+    if (error.message === "Comentário não encontrado.") {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+// ********* DENUNCIAS ********* //
+// Rota para registrar denúncia
+app.post("/api/denunciar", async (req, res) => {
+  const { tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo } = req.body;
+
+  // Validações do corpo da requisição
+  if (!tipo || !["EVENTO", "USUARIO"].includes(tipo)) {
+    return res.status(400).json({ error: "Tipo de denúncia inválido" });
+  }
+  if (tipo === "EVENTO" && !evento_id) {
+    return res.status(400).json({ error: "ID do evento é obrigatório" });
+  }
+  if (tipo === "USUARIO" && !usuario_denunciado_id) {
+    return res.status(400).json({ error: "ID do usuário denunciado é obrigatório" });
+  }
+  if (!usuario_denunciador_id) {
+    return res.status(400).json({ error: "ID do usuário denunciador é obrigatório" });
+  }
+
+  try {
+    await db.registrarDenuncia(tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo);
+    res.json({ message: "Denúncia registrada com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao registrar denúncia:", error);
+    res.status(error.message.includes("não encontrado") || error.message.includes("inválido") ? 400 : 500).json({
+      error: error.message || "Erro ao registrar denúncia",
+    });
+  }
+});
+
+// Rota para consultar denúncias de um usuário
+app.get("/api/consultardenunciasusuario", async (req, res) => {
+  try {
+    const usuarioId = req.query.usuario_id;
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'ID do usuário é obrigatório' });
+    }
+    const denuncias = await db.consultaDenunciasUsuario(usuarioId);
+    res.json(denuncias);
+  } catch (error) {
+    console.error('Erro na rota /consultardenunciasusuario:', error);
+    res.status(500).json({ error: 'Erro ao consultar denúncias' });
+  }
+});
+
+// Rota para consultar denúncias de um evento
+app.get("/api/consultardenunciasevento", async (req, res) => {
+  try {
+    const eventoId = req.query.evento_id;
+    if (!eventoId) {
+      return res.status(400).json({ error: 'ID do evento é obrigatório' });
+    }
+    const denuncias = await db.consultaDenunciasEvento(eventoId);
+    res.json(denuncias);
+  } catch (error) {
+    console.error('Erro na rota /consultardenunciasevento:', error);
+    res.status(500).json({ error: 'Erro ao consultar denúncias' });
+  }
+});
+
+// Rota para consultar eventos denunciados
+app.get("/api/consultareventosdenunciados", async (req, res) => {
+  try {
+    const eventos = await db.consultarEventosDenunciados();
+    res.json(eventos);
+  } catch (error) {
+    console.error('Erro na rota /consultareventosdenunciados:', error);
+    res.status(500).json({ error: 'Erro ao consultar eventos denunciados' });
   }
 });
 

@@ -33,7 +33,7 @@ async function login(usuario, senha) {
     return rows; // Retorna resultados (array de objetos)
 }
 
-// Função para buscar usuário por email
+// Função para buscar usuário por email, estou usando esse para autenticação
 async function buscarUsuarioPorEmail(email) {
     const conn = await connect();
     try {
@@ -626,9 +626,9 @@ async function consultarInscritos(evento_id) {
   console.log("Consultando inscritos para evento_id:", evento_id);
   const conn = await connect();
   // Query SQL para buscar inscritos com nome completo, em ordem alfabética
-  const sql = "SELECT u.id, u.nome_completo FROM inscricao i JOIN usuario u ON i.usuario_id = u.id WHERE i.evento_id = ? ORDER BY u.nome_completo ASC ";
+  const sql = "SELECT u.id, u.nome_completo, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = ?) AS total_inscritos FROM inscricao i JOIN usuario u ON i.usuario_id = u.id WHERE i.evento_id = ? ORDER BY u.nome_completo ASC ";
   try {
-    const [rows] = await conn.query(sql, [evento_id]);
+    const [rows] = await conn.query(sql, [evento_id, evento_id]);
     // Loga inscritos encontrados
     console.log("Inscritos encontrados:", rows);
     // Retorna lista de inscritos
@@ -661,6 +661,382 @@ async function consultaCidade() {
     return rows;
 }
 
+// **************************************** MODO ADM ****************************************** //
+
+// Função para buscar admin por email
+async function buscarAdminPorEmail(email) {
+  const conn = await connect();
+  try {
+    const [rows] = await conn.query(
+      'SELECT id, nome_completo, email, senha FROM adm WHERE email = ?',
+      [email]
+    );
+    return rows[0] || null;
+  } catch (error) {
+    console.error('Erro ao buscar admin por email:', error);
+    throw error;
+  }
+}
+
+/*Função para consultar todos os usuários
+async function consultaUsuarios() {
+  const conn = await connect();
+  try {
+    console.log('Executando consulta de usuários...');
+    const [rows] = await conn.query('SELECT u.id, u.nome_completo FROM usuario u ORDER BY u.nome_completo ASC ');
+    console.log('Usuários encontrados:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
+    throw error;
+  } 
+}*/
+
+// Função para consultar todos os usuários ou usuários denunciados
+async function consultaUsuarios(filtroDenunciados = false) {
+  const conn = await connect();
+  try {
+    console.log('Executando consulta de usuários...');
+    let query = `
+      SELECT u.id, u.nome_completo
+      FROM usuario u
+    `;
+    if (filtroDenunciados) {
+      query += `
+        INNER JOIN denuncias d ON u.id = d.usuario_denunciado_id
+        WHERE d.tipo = 'USUARIO'
+      `;
+    }
+    query += ' ORDER BY u.nome_completo ASC';
+
+    const [rows] = await conn.query(query);
+    console.log('Usuários encontrados:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
+    throw error;
+  } 
+}
+
+async function cadastrarAdmin(nome_completo, email, senha) {
+  const conn = await connect();
+
+  // Normalizar nome_completo (ex.: Camila de Araujo Machado)
+  let nomeNormalizado = '';
+  if (nome_completo && typeof nome_completo === 'string') {
+    // Remover espaços extras e converter para minúsculas
+    let nome = nome_completo.trim().replace(/\s+/g, ' ').toLowerCase();
+    // Dividir em palavras
+    let palavras = nome.split(' ');
+    // Lista de preposições que ficam em minúscula
+    const preposicoes = ['de', 'da', 'dos', 'das'];
+    // Capitalizar palavras, exceto preposições
+    palavras = palavras.map((palavra, index) => {
+      // Manter preposições em minúscula, exceto se forem a primeira ou última palavra
+      if (preposicoes.includes(palavra) && index !== 0 && index !== palavras.length - 1) {
+        return palavra;
+      }
+      // Capitalizar a primeira letra
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    });
+    // Juntar palavras
+    nomeNormalizado = palavras.join(' ');
+  } else {
+    throw new Error('Nome completo é obrigatório e deve ser uma string válida.');
+  }
+
+  const sql = "INSERT INTO adm (nome_completo, email, senha) VALUES (?, ?, ?)";
+  const senhaHash = await bcrypt.hash(senha, 10);
+  const values = [nomeNormalizado, email, senhaHash];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    console.log('Administrador cadastrado com sucesso! ID:', result.insertId);
+    return result.insertId;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      console.log('Erro: Email já cadastrado:', email);
+      throw new Error('Este email já está cadastrado.');
+    }
+    console.error('Erro ao cadastrar administrador:', error);
+    throw error;
+  } 
+}
+
+async function consultarAdmins() {
+  const conn = await connect();
+  const sql = "SELECT id, nome_completo, email FROM adm ORDER BY nome_completo ASC";
+
+  try {
+    const [rows] = await conn.query(sql);
+    return rows;
+  } catch (error) {
+    console.error("Erro ao consultar administradores:", error);
+    throw error;
+  } 
+}
+
+async function excluirAdmin(id) {
+  const conn = await connect();
+  const sql = "DELETE FROM adm WHERE id = ?";
+  const values = [id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows === 0) {
+      throw new Error("Administrador não encontrado");
+    }
+    console.log("Administrador excluído!");
+  } catch (error) {
+    console.error("Erro ao excluir administrador:", error);
+    throw error;
+  } 
+}
+
+async function alterarAdmin(id, nome_completo, email) {
+  const conn = await connect();
+
+  // Normalizar nome_completo
+  let nomeNormalizado = '';
+  if (nome_completo && typeof nome_completo === 'string') {
+    // Verificar se contém números
+    if (/\d/.test(nome_completo)) {
+      throw new Error('O nome completo não pode conter números.');
+    }
+    // Remover espaços extras e converter para minúsculas
+    let nome = nome_completo.trim().replace(/\s+/g, ' ').toLowerCase();
+    // Dividir em palavras
+    let palavras = nome.split(' ');
+    // Lista de preposições que ficam em minúscula
+    const preposicoes = ['de', 'da', 'dos', 'das'];
+    // Capitalizar palavras, exceto preposições
+    palavras = palavras.map((palavra, index) => {
+      // Manter preposições em minúscula, exceto se forem a primeira ou última palavra
+      if (preposicoes.includes(palavra) && index !== 0 && index !== palavras.length - 1) {
+        return palavra;
+      }
+      // Capitalizar a primeira letra
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    });
+    // Juntar palavras
+    nomeNormalizado = palavras.join(' ');
+  } else {
+    throw new Error('Nome completo é obrigatório e deve ser uma string válida.');
+  }
+
+  const sql = "UPDATE adm SET nome_completo = ?, email = ? WHERE id = ?";
+  const values = [nomeNormalizado, email, id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows === 0) {
+      throw new Error("Administrador não encontrado.");
+    }
+    console.log('Administrador atualizado com sucesso! ID:', id);
+    return id;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      console.log('Erro: Email já cadastrado:', email);
+      throw new Error('Este email já está cadastrado.');
+    }
+    console.error('Erro ao atualizar administrador:', error);
+    throw error;
+  }
+}
+
+// Função para excluir um usuário
+async function excluirUsuario(id) {
+  const conn = await connect();
+  const sql = "DELETE FROM usuario WHERE id = ?";
+  const values = [id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows === 0) {
+      throw new Error("Usuário não encontrado");
+    }
+    console.log("Usuário excluído!");
+  } catch (error) {
+    console.error("Erro ao excluir usuário:", error);
+    throw error;
+  }
+}
+
+async function excluirEventoAdm(evento_id) {
+  const conn = await connect();
+  const sql = "DELETE FROM evento WHERE id = ?";
+  const values = [evento_id];
+
+  try {
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows === 0) {
+      throw new Error("Evento não encontrado");
+    }
+    console.log("Evento excluído!");
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir evento:", error);
+    throw error;
+  } 
+}
+
+async function excluirComentarioAdm(id_comentario) {
+  console.log("Excluindo comentário:", id_comentario);
+  const conn = await connect();
+  const sql = "DELETE FROM comentarios WHERE id = ?";
+  try {
+    const [result] = await conn.query(sql, [id_comentario]);
+    console.log("Resultado da exclusão:", result);
+    if (result.affectedRows === 0) {
+      throw new Error("Comentário não encontrado.");
+    }
+    return { message: "Comentário excluído com sucesso." };
+  } catch (error) {
+    console.error("Erro ao excluir comentário:", error);
+    throw error;
+  } 
+}
+
+
+// ********************* DENUNCIAS ********************* //
+async function registrarDenuncia(tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo) {
+  const conn = await connect(); // Sua função de conexão com o MySQL
+  let sql, values;
+
+  try {
+    // Verificar se já existe denúncia para o mesmo evento e usuário
+    const [existing] = await conn.query(`
+      SELECT 1
+      FROM denuncias
+      WHERE tipo = ? AND evento_id = ? AND usuario_denunciador_id = ?
+    `, [tipo, evento_id, usuario_denunciador_id]);
+    
+    if (existing.length > 0) {
+      throw new Error('Você já denunciou este evento.');
+    }
+    // Validações iniciais
+    if (!["EVENTO", "USUARIO"].includes(tipo)) {
+      throw new Error("Tipo de denúncia inválido");
+    }
+    if (tipo === "EVENTO" && !evento_id) {
+      throw new Error("ID do evento é obrigatório para denúncias de evento");
+    }
+    if (tipo === "USUARIO" && !usuario_denunciado_id) {
+      throw new Error("ID do usuário denunciado é obrigatório para denúncias de usuário");
+    }
+    if (!usuario_denunciador_id) {
+      throw new Error("ID do usuário denunciador é obrigatório");
+    }
+    if (tipo === "USUARIO" && usuario_denunciador_id === usuario_denunciado_id) {
+      throw new Error("Você não pode denunciar a si mesmo");
+    }
+
+    // Verifica se o evento ou usuário denunciado existe
+    if (tipo === "EVENTO") {
+      const [evento] = await conn.query("SELECT id FROM evento WHERE id = ?", [evento_id]);
+      if (evento.length === 0) {
+        throw new Error("Evento não encontrado");
+      }
+    } else {
+      const [usuario] = await conn.query("SELECT id FROM usuario WHERE id = ?", [usuario_denunciado_id]);
+      if (usuario.length === 0) {
+        throw new Error("Usuário denunciado não encontrado");
+      }
+    }
+
+    // Verifica se o denunciador existe
+    const [denunciador] = await conn.query("SELECT id FROM usuario WHERE id = ?", [usuario_denunciador_id]);
+    if (denunciador.length === 0) {
+      throw new Error("Usuário denunciador não encontrado");
+    }
+
+    // Monta a query de inserção
+    sql = "INSERT INTO denuncias (tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+    values = [
+      tipo,
+      tipo === "EVENTO" ? evento_id : null,
+      tipo === "USUARIO" ? usuario_denunciado_id : null,
+      usuario_denunciador_id,
+      motivo || null,
+    ];
+
+    // Executa a inserção
+    const [result] = await conn.query(sql, values);
+    if (result.affectedRows === 0) {
+      throw new Error("Falha ao registrar denúncia");
+    }
+    console.log("Denúncia registrada com sucesso!");
+  } catch (error) {
+    console.error("Erro ao registrar denúncia:", error);
+    throw error;
+  } 
+}
+
+async function consultaDenunciasUsuario(usuarioId) {
+  const conn = await connect();
+  try {
+    console.log(`Consultando denúncias para usuário ID ${usuarioId}...`);
+    const [rows] = await conn.query(`
+      SELECT d.motivo, d.data_denuncia, u.nome_completo AS denunciador
+      FROM denuncias d
+      LEFT JOIN usuario u ON d.usuario_denunciador_id = u.id
+      WHERE d.tipo = 'USUARIO' AND d.usuario_denunciado_id = ?
+      ORDER BY d.data_denuncia DESC
+    `, [usuarioId]);
+    console.log('Denúncias encontradas:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Erro ao buscar denúncias:', error);
+    throw error;
+  }
+}
+
+// Função para consultar denúncias de um evento específico
+async function consultaDenunciasEvento(eventoId) {
+  const conn = await connect();
+  try {
+    console.log(`Consultando denúncias para evento ID ${eventoId}...`);
+    // DISTINC para evitar duplicadas
+    const [rows] = await conn.query(`
+      SELECT DISTINCT d.motivo, d.data_denuncia, u.nome_completo AS denunciador
+      FROM denuncias d
+      LEFT JOIN usuario u ON d.usuario_denunciador_id = u.id
+      WHERE d.tipo = 'EVENTO' AND d.evento_id = ?
+      ORDER BY d.data_denuncia DESC
+    `, [eventoId]);
+    console.log('Denúncias encontradas:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Erro ao buscar denúncias:', error);
+    throw error;
+  }
+}
+
+// Função para consultar eventos denunciados
+async function consultarEventosDenunciados() {
+  const conn = await connect();
+  try {
+    const sql = `
+      SELECT e.*, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade,
+             TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,
+             TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
+             (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos
+      FROM evento e
+      JOIN usuario u ON e.id_usuario = u.id
+      JOIN cidade c ON e.id_cidade = c.id
+      INNER JOIN denuncias d ON e.id = d.evento_id AND d.tipo = 'EVENTO'
+      WHERE e.fim >= NOW()
+      ORDER BY e.inicio ASC
+    `;
+    console.log("Executando consulta de eventos denunciados:", sql);
+    const [rows] = await conn.query(sql);
+    console.log("Eventos denunciados encontrados:", rows);
+    return rows;
+  } catch (error) {
+    console.error("Erro ao consultar eventos denunciados:", error);
+    throw error;
+  } 
+}
 
 // Exporta todas as funções como um módulo
 module.exports = {consultaCidadeporUF,
@@ -689,5 +1065,18 @@ module.exports = {consultaCidadeporUF,
                   excluirComentario,
                   editarComentario,
                   consultarInscritos, 
+                  buscarAdminPorEmail,
+                  consultaUsuarios,
+                  cadastrarAdmin,
+                  consultarAdmins,
+                  excluirAdmin,
+                  alterarAdmin,
+                  excluirUsuario,
+                  excluirEventoAdm,
+                  excluirComentarioAdm,
+                  registrarDenuncia,
+                  consultaDenunciasUsuario,
+                  consultaDenunciasEvento,
+                  consultarEventosDenunciados,
                                 
 };

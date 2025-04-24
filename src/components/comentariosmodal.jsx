@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DenunciaModal from "../components/denunciarmodal"; // Importar DenunciaModal
 
 const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // props para carregar comentários especificos e controlar o modal
   const [comentarios, setComentarios] = useState([]); // Armazena a lista de comentários recebida da API
@@ -10,6 +11,8 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
   const [mostrarModalConfirmacao, setMostrarModalConfirmacao] = useState(false); // Estado para o modal de confirmação
   const [idComentarioParaExcluir, setIdComentarioParaExcluir] = useState(null); // Estado para armazenar o ID do comentário a excluir
   const comentariosRef = useRef(null); // Referência ao elemento <div> que contém a lista de comentários, usada para rolar automaticamente até o final quando novos comentários são carregados.
+  const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para DenunciaModal
+  const [usuarioDenunciadoId, setUsuarioDenunciadoId] = useState(null); // ID do usuário denunciado
 
   // Logar idUsuario para depuração
   console.log("idUsuario recebido:", idUsuario);
@@ -197,6 +200,8 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
 
   // ****** Renderiza o modal de comentários ******
   return (
+    <>
+    {/* Modal de comentários */}
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-6 max-w-lg w-full relative flex flex-col h-[80vh]">
         {/* Botão para fechar o modal */}
@@ -284,63 +289,89 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
                       <p className="text-gray-700 text-sm">{comentario.comentario}</p>
                     )}
                   </div>
+                  <div className="flex items-center gap-2 ml-2">
                   {/* Botões de editar/excluir aparecem apenas para comentários do usuário logado. */}
                   {Number(comentario.id_usuario) === Number(idUsuario) && // NUMBER é pra converter o idUsuario para número, já que ele vem como string da api
-                    editandoId !== comentario.id && (
-                      <div className="flex gap-2 ml-2">
-                        <button
-                          onClick={() =>
-                            handleEditarComentario(comentario.id, comentario.comentario)
-                          }
-                          className="text-gray-600 hover:text-blue-900"
-                          title="Editar comentário"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="icon icon-tabler icons-tabler-outline icon-tabler-pencil"
-                          >
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                            <path d="M13.5 6.5l4 4" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleExcluirComentario(comentario.id)}
-                          className="text-gray-600 hover:text-red-600"
-                          title="Excluir comentário"
-                        >                
+                  editandoId !== comentario.id && (
+                      <>
+                      <button
+                        onClick={() =>
+                          handleEditarComentario(comentario.id, comentario.comentario)
+                        }
+                        className="text-gray-600 hover:text-blue-900"
+                        title="Editar comentário"
+                      >
                         <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="icon icon-tabler icons-tabler-outline icon-tabler-trash"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="icon icon-tabler icons-tabler-outline icon-tabler-pencil"
                         >
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                        <path d="M4 7l16 0" />
-                        <path d="M10 11l0 6" />
-                        <path d="M14 11l0 6" />
-                        <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-                        <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                          <path d="M13.5 6.5l4 4" />
                         </svg>
-                        </button>
-                      </div>
-                    )}
+                      </button>
+                      <button
+                        onClick={() => handleExcluirComentario(comentario.id)}
+                        className="text-gray-600 hover:text-red-600"
+                        title="Excluir comentário"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="icon icon-tabler icons-tabler-outline icon-tabler-trash"
+                        >
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <path d="M4 7l16 0" />
+                          <path d="M10 11l0 6" />
+                          <path d="M14 11l0 6" />
+                          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                  {Number(comentario.id_usuario) !== Number(idUsuario) && ( // Condição que não pode aparecer o denunciar se o usuário logado for o mesmo que fez o comentário
+                  <button // Botão de denunciar comentário
+                  onClick={() => {
+                    setUsuarioDenunciadoId(comentario.id_usuario);
+                    setMostrarDenunciaModal(true);}}
+                    className="text-red-600 hover:text-red-900"
+                    title="Denunciar comentário"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </button>
+                )}
                 </div>
               </div>
+            </div>
             ))
           ) : (
             <p className="text-gray-500 text-sm">Nenhum comentário ainda.</p>
@@ -408,6 +439,20 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
         )}
       </div>
     </div>
+
+    <DenunciaModal
+    isOpen={mostrarDenunciaModal}
+    onClose={() => {
+      setMostrarDenunciaModal(false);
+      setUsuarioDenunciadoId(null); // Limpa o ID ao fechar
+    }}
+    tipo="USUARIO"
+    usuarioDenunciadoId={usuarioDenunciadoId}
+    usuarioDenunciadorId={idUsuario}
+    />
+
+    </>
+          
   );
 };
 

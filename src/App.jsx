@@ -9,6 +9,10 @@ import EventosInscritos from './pages/eventosinscritos';
 import Explorar from './pages/explorar';
 import EventosCriados from './pages/eventoscriados';
 
+import GerenciarEventos from './pages/gerenciareventos';
+import GerenciarUsuarios from './pages/gerenciarusuarios';
+import CadastrarAdmin from './pages/cadastraradmin';
+
 
 function App() {
   return (
@@ -19,10 +23,17 @@ function App() {
         <Route path="/cadastropet" element={<CadastroPet />} />
         <Route path="/landingpage" element={<LandingPage />} />
 
-         {/* Novas rotas do menu */}
+         {/* Rotas do menu usuário */}
         <Route path="/eventosinscritos" element={<EventosInscritos />} />
         <Route path="/explorar" element={<Explorar />} />
         <Route path="/eventoscriados" element={<EventosCriados />} />
+
+        {/* Rotas do menu adm */}
+        <Route path="/gerenciareventos" element={<GerenciarEventos />} />
+        <Route path="/gerenciarusuarios" element={<GerenciarUsuarios />} />
+        <Route path="/cadastraradmin" element={<CadastrarAdmin />} />
+
+  
       </Routes>
     </Router>
   );
