@@ -975,6 +975,42 @@ app.get("/api/consultareventosdenunciados", async (req, res) => {
   }
 });
 
+// Rota para ignorar usuários denunciados
+app.post("/api/ignorardenunciasusuario", async (req, res) => {
+  try {
+    const { usuario_id } = req.body;
+    if (!usuario_id) {
+      return res.status(400).json({ error: "ID do usuário é obrigatório" });
+    }
+    const affectedRows = await db.ignorarDenunciasUsuario(usuario_id);
+    if (affectedRows === 0) {
+      return res.status(200).json({ message: "Nenhuma denúncia pendente encontrada para rejeitar" });
+    }
+    res.status(200).json({ message: "Denúncias rejeitadas com sucesso" });
+  } catch (error) {
+    console.error("Erro na rota /ignorardenunciasusuario:", error);
+    res.status(500).json({ error: "Erro ao rejeitar denúncias" });
+  }
+});
+
+// Rota para ignorar eventos denunciados
+app.post("/api/ignorardenunciasevento", async (req, res) => {
+  try {
+    const { evento_id } = req.body;
+    if (!evento_id) {
+      return res.status(400).json({ error: "ID do evento é obrigatório" });
+    }
+    const affectedRows = await db.ignorarDenunciasEvento(evento_id);
+    if (affectedRows === 0) {
+      return res.status(200).json({ message: "Nenhuma denúncia pendente encontrada para rejeitar" });
+    }
+    res.status(200).json({ message: "Denúncias rejeitadas com sucesso" });
+  } catch (error) {
+    console.error("Erro na rota /ignorardenunciasevento:", error);
+    res.status(500).json({ error: "Erro ao rejeitar denúncias" });
+  }
+});
+
 // Configura o body-parser para processar JSON e formulários com limite de 10MB
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));

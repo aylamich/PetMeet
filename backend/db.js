@@ -704,7 +704,7 @@ async function consultaUsuarios(filtroDenunciados = false) {
     if (filtroDenunciados) {
       query += `
         INNER JOIN denuncias d ON u.id = d.usuario_denunciado_id
-        WHERE d.tipo = 'USUARIO'
+        WHERE d.tipo = 'USUARIO' AND d.status = 'PENDENTE'
       `;
     }
     query += ' ORDER BY u.nome_completo ASC';
@@ -977,10 +977,11 @@ async function consultaDenunciasUsuario(usuarioId) {
   try {
     console.log(`Consultando denúncias para usuário ID ${usuarioId}...`);
     const [rows] = await conn.query(`
-      SELECT d.motivo, d.data_denuncia, u.nome_completo AS denunciador
+      SELECT d.motivo, d.data_denuncia, d.usuario_denunciado_id, u.nome_completo AS denunciador
       FROM denuncias d
       LEFT JOIN usuario u ON d.usuario_denunciador_id = u.id
       WHERE d.tipo = 'USUARIO' AND d.usuario_denunciado_id = ?
+      AND d.status = 'PENDENTE'
       ORDER BY d.data_denuncia DESC
     `, [usuarioId]);
     console.log('Denúncias encontradas:', rows);
@@ -998,10 +999,10 @@ async function consultaDenunciasEvento(eventoId) {
     console.log(`Consultando denúncias para evento ID ${eventoId}...`);
     // DISTINC para evitar duplicadas
     const [rows] = await conn.query(`
-      SELECT DISTINCT d.motivo, d.data_denuncia, u.nome_completo AS denunciador
+      SELECT DISTINCT d.motivo, d.data_denuncia, d.evento_id, u.nome_completo AS denunciador
       FROM denuncias d
       LEFT JOIN usuario u ON d.usuario_denunciador_id = u.id
-      WHERE d.tipo = 'EVENTO' AND d.evento_id = ?
+      WHERE d.tipo = 'EVENTO' AND d.evento_id = ? AND d.status = 'PENDENTE'
       ORDER BY d.data_denuncia DESC
     `, [eventoId]);
     console.log('Denúncias encontradas:', rows);
@@ -1024,7 +1025,7 @@ async function consultarEventosDenunciados() {
       FROM evento e
       JOIN usuario u ON e.id_usuario = u.id
       JOIN cidade c ON e.id_cidade = c.id
-      INNER JOIN denuncias d ON e.id = d.evento_id AND d.tipo = 'EVENTO'
+      INNER JOIN denuncias d ON e.id = d.evento_id AND d.tipo = 'EVENTO' AND d.status = 'PENDENTE'
       WHERE e.fim >= NOW()
       ORDER BY e.inicio ASC
     `;
@@ -1034,6 +1035,47 @@ async function consultarEventosDenunciados() {
     return rows;
   } catch (error) {
     console.error("Erro ao consultar eventos denunciados:", error);
+    throw error;
+  } 
+}
+
+// Função para ignorar denúncias de um usuário específico
+// Atualiza o status das denúncias para 'IGNORADO'
+async function ignorarDenunciasUsuario(usuarioId) {
+  const conn = await connect();
+  try {
+    console.log(`Ignorando denúncias para usuário ID ${usuarioId}...`);
+    const [result] = await conn.query(`
+      UPDATE denuncias
+      SET status = 'IGNORADO'
+      WHERE tipo = 'USUARIO'
+        AND usuario_denunciado_id = ?
+        AND status = 'PENDENTE'
+    `, [usuarioId]);
+    console.log('Denúncias ignoradas:', result.affectedRows);
+    return result.affectedRows;
+  } catch (error) {
+    console.error('Erro ao ignorar denúncias:', error);
+    throw error;
+  } 
+}
+
+// Função para ignorar denuncias de um evento específico
+async function ignorarDenunciasEvento(eventoId) {
+  const conn = await connect();
+  try {
+    console.log(`Ignorando denúncias para evento ID ${eventoId}...`);
+    const [result] = await conn.query(`
+      UPDATE denuncias
+      SET status = 'IGNORADO'
+      WHERE tipo = 'EVENTO'
+        AND evento_id = ?
+        AND status = 'PENDENTE'
+    `, [eventoId]);
+    console.log('Denúncias ignoradas:', result.affectedRows);
+    return result.affectedRows;
+  } catch (error) {
+    console.error('Erro ao ignorar denúncias:', error);
     throw error;
   } 
 }
@@ -1078,5 +1120,7 @@ module.exports = {consultaCidadeporUF,
                   consultaDenunciasUsuario,
                   consultaDenunciasEvento,
                   consultarEventosDenunciados,
+                  ignorarDenunciasUsuario,
+                  ignorarDenunciasEvento,
                                 
 };

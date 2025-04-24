@@ -129,6 +129,37 @@ const GerenciarEventos = () => {
     }
   };
 
+  const ignorarDenunciasEvento = async (eventoId) => {
+    if (!eventoId) {
+      console.error('Erro: eventoId não fornecido para ignorarDenunciasEvento');
+      setErro("ID do evento inválido. Tente novamente.");
+      setTimeout(() => setErro(""), 3000);
+      return;
+    }
+    try {
+      console.log('Enviando requisição para ignorar denúncias com eventoId:', eventoId);
+      const response = await fetch("/api/ignorardenunciasevento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evento_id: eventoId }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
+      setMensagem("Denúncias rejeitadas com sucesso!");
+      setModalDenunciasAberto(false);
+      setDenuncias([]);
+      setEventoDenunciadoNome("");
+      await fetchEventos(filtros);
+      setTimeout(() => setMensagem(""), 3000);
+    } catch (error) {
+      console.error("Erro ao rejeitar denúncias:", error);
+      setErro("Não foi possível rejeitar as denúncias. Tente novamente.");
+      setTimeout(() => setErro(""), 3000);
+    }
+  };
+
   useEffect(() => {
     setEventos([]);
     fetchEventos(filtros);
@@ -759,8 +790,20 @@ const GerenciarEventos = () => {
             ) : (
               <p className="text-gray-700 mb-6">Nenhuma denúncia encontrada.</p>
             )}
-            <div className="flex justify-end mt-4">
-              <button
+            <div className="flex justify-end mt-4 gap-2">
+              {denuncias.length > 0 && denuncias[0]?.evento_id && (
+                <button // Botão de rejeitar denúncias
+                  onClick={() => {
+                    console.log('Denuncias:', denuncias);
+                    console.log('Evento denunciado ID:', denuncias[0].evento_id);
+                    ignorarDenunciasEvento(denuncias[0].evento_id);
+                  }}
+                  className="bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
+                >
+                  Rejeitar Denúncias
+                </button>
+              )}
+              <button // Botão de fechar modal
                 onClick={() => {
                   setModalDenunciasAberto(false);
                   setDenuncias([]);

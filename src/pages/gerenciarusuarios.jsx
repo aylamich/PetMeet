@@ -62,6 +62,30 @@ const GerenciarUsuarios = () => {
     }
   };
 
+  const ignorarDenunciasUsuario = async (usuarioId) => {
+    try {
+      const response = await fetch("/api/ignorardenunciasusuario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: usuarioId }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
+      setMensagem("Denúncias rejeitadas com sucesso!");
+      setModalDenunciasAberto(false);
+      setDenuncias([]);
+      setUsuarioDenunciadoNome("");
+      fetchUsuarios(filtroDenunciados ? 'denunciados' : '');
+      setTimeout(() => setMensagem(""), 3000);
+    } catch (error) {
+      console.error("Erro ao rejeitar denúncias:", error);
+      setErro("Não foi possível rejeitar as denúncias. Tente novamente.");
+      setTimeout(() => setErro(""), 3000);
+    }
+  };
+
   // Abrir modal de perfil
   const openProfileModal = (usuario) => {
     setSelectedUsuarioId(usuario.id);
@@ -290,29 +314,37 @@ const GerenciarUsuarios = () => {
                         <strong>Denunciador:</strong> {denuncia.denunciador || "Anônimo"}
                       </p>
                       <p className="text-sm text-gray-600">
-                      <strong>Data:</strong>{" "}
-                      {new Date(denuncia.data_denuncia).toLocaleString("pt-BR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </p>
+                        <strong>Data:</strong>{" "}
+                        {new Date(denuncia.data_denuncia).toLocaleString("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-gray-700 mb-6">Nenhuma denúncia encontrada.</p>
               )}
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={fecharModalDenuncias}
-                  className="bg-gray-200 text-black py-2 px-4 rounded-md hover:bg-gray-300"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              <div className="flex justify-end mt-4 gap-2">
+                {denuncias.length > 0 && (
+                  <button
+                    onClick={() => ignorarDenunciasUsuario(denuncias[0].usuario_denunciado_id)}
+                    className="bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
+                  >
+                    Rejeitar Denúncia
+                  </button>
+                )}
+        <button
+          onClick={fecharModalDenuncias}
+          className="bg-gray-200 text-black py-2 px-4 rounded-md hover:bg-gray-300"
+        >
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );

@@ -181,6 +181,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
                 <p className="font-medium text-gray-700">
                   {inscrito.nome_completo || "Usuário sem nome"}
                 </p>
+                {inscrito.id !== parseInt(idUsuario) && ( // Comparação parseInt(idUsuario) assume que idUsuario é uma string e inscrito.id é um número.
                 <button
                 onClick={(e) => {
                   e.stopPropagation(); // Impede que o clique no botão abra o modal de perfil
@@ -205,6 +206,7 @@ const ModalInscritos = ({ eventoId, onClose }) => {
                     />
                   </svg>
                 </button>
+                )}
                 </div>
               </div>
             ))}
