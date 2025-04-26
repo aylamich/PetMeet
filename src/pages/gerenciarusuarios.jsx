@@ -101,10 +101,10 @@ const GerenciarUsuarios = () => {
   // Confirmar exclusão do usuário
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluirusuario", {
+      const response = await fetch("http://localhost:3000/api/excluirusuario", { // http://localhost:3000/api/excluirusuario
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: usuarioParaExcluir.id }),
+        body: JSON.stringify({ usuario_id: usuarioParaExcluir.id }),
       });
 
       const data = await response.json();
@@ -114,6 +114,7 @@ const GerenciarUsuarios = () => {
         setUsuarioParaExcluir(null);
         fetchUsuarios(filtroDenunciados ? 'denunciados' : '');
         setTimeout(() => setMensagem(""), 3000);
+        
       } else {
         setErro(data.error || "Erro ao excluir usuário.");
       }

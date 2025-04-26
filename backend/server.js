@@ -91,44 +91,6 @@ app.post('/api/consultacidadeporUF', async (req, res) => {
   }
 });
 
-/*app.post('/api/login', async (req, res) => {
-  try {
-    // Extrai email e senha do corpo da requisição
-    const { email, senha } = req.body;
-    console.log("Tentativa de login:", email);
-
-    // Busca o usuário por email
-    const usuario = await db.buscarUsuarioPorEmail(email);
-    if (!usuario) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
-    // Verifica se o hash da senha é válido
-    /*Pega a senha em texto puro fornecida (senha, ex.: "minhaSenha123").
-    Usa o mesmo salt que está embutido no hash armazenado (usuario.senha). 
-    Gera um novo hash a partir da senha fornecida e compara com o hash armazenado.
-    Retorna true se os hashes coincidirem (senha correta) ou false se não (senha incorreta).
-    if (!usuario.senha?.startsWith('$2')) {
-      console.error("Hash inválido para:", email);
-      return res.status(500).json({ error: 'Erro na configuração do servidor' });
-    }
-
-    // Compara a senha fornecida com a senha criptografada
-    const senhaValida = await bcrypt.compare(senha, usuario.senha);
-    
-    if (!senhaValida) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
-    // RETORNA ID e nome do usuário em caso de sucesso
-    res.json({ usuario_id: usuario.id, nome: usuario.nome_completo }); // Nome do usuário para identificar na interface o usuário logado
-    console.log("Login bem-sucedido:", email);
-
-  } catch (error) {
-    console.error("Erro no login:", error);
-    res.status(500).json({ error: 'Erro interno no servidor' });
-  }
-});*/
 
 // Rota para login, conferindo se o usuário é admin ou usuário comum
 app.post('/api/login', async (req, res) => {
@@ -145,7 +107,7 @@ app.post('/api/login', async (req, res) => {
         console.error('Hash inválido para usuário:', email);
         return res.status(500).json({ error: 'Erro na configuração do servidor' });
       }
-      const senhaValida = await bcrypt.compare(senha, usuario.senha);
+      const senhaValida = await bcrypt.compare(senha, usuario.senha); // Verifica se a senha é válida
       if (senhaValida) {
         console.log('Login bem-sucedido (usuário):', email);
         return res.json({ usuario_id: usuario.id, nome: usuario.nome_completo, tipo: 'usuario' });
@@ -160,7 +122,7 @@ app.post('/api/login', async (req, res) => {
         console.error('Hash inválido para admin:', email);
         return res.status(500).json({ error: 'Erro na configuração do servidor' });
       }
-      const senhaValida = await bcrypt.compare(senha, adm.senha);
+      const senhaValida = await bcrypt.compare(senha, adm.senha); // Verifica se a senha é válida
       if (senhaValida) {
         console.log('Login bem-sucedido (admin):', email);
         return res.json({ id: adm.id, nome: adm.nome_completo, tipo: 'adm'
@@ -838,26 +800,33 @@ app.post("/api/alteraradmin", async (req, res) => {
   }
 });
 
-// Endpoint para excluir um usuário
+// Rota para excluir usuário (admin)
 app.post("/api/excluirusuario", async (req, res) => {
-  const { id } = req.body;
+  console.log("Rota /api/excluirusuario chamada com body:", req.body);
+  const { usuario_id } = req.body;
 
-  // Validação do ID
-  if (!id) {
-    return res.status(400).json({ error: "ID do usuário é obrigatório." });
+  if (!usuario_id) {
+    console.log("Erro: usuario_id não fornecido");
+    return res.status(400).json({ error: "usuario_id é obrigatório e deve ser um número." });
   }
 
   try {
-    await db.excluirUsuario(id);
-    res.status(200).json({ message: "Usuário excluído com sucesso." });
+    console.log(`Chamando db.excluirUsuario(${usuario_id})`);
+    await db.excluirUsuario(usuario_id);
+    console.log("Exclusão bem-sucedida");
+    return res.status(200).json({ message: "Usuário excluído com sucesso." });
   } catch (error) {
+    console.error("Erro na rota /api/excluirusuario:", error.message);
     if (error.message === "Usuário não encontrado") {
+      console.log("Usuário não encontrado, retornando 404");
       return res.status(404).json({ error: error.message });
     }
-    res.status(500).json({ error: "Erro interno no servidor." });
+    console.error("Erro interno, retornando 500");
+    return res.status(500).json({ error: "Erro interno no servidor." });
   }
 });
 
+// Rota para excluir evento (admin)
 app.post("/api/excluireventoadm", async (req, res) => {
   console.log("Requisição recebida em /api/excluireventoadm:", req.body);
   const { evento_id } = req.body;

@@ -23,7 +23,7 @@ async function connect(){
 
 connect(); // Inicia a conexão com o banco de dados ao carregar o módulo
 
-// Função para autenticar o usuário (email e senha)
+// Função para autenticar o usuário (email e senha)/ não estou usando essa função, mas vou deixar aqui para o caso de precisar depois
 async function login(usuario, senha) {
     const conn = await connect();
     // Query SQL para buscar usuário por email e senha
@@ -678,21 +678,7 @@ async function buscarAdminPorEmail(email) {
   }
 }
 
-/*Função para consultar todos os usuários
-async function consultaUsuarios() {
-  const conn = await connect();
-  try {
-    console.log('Executando consulta de usuários...');
-    const [rows] = await conn.query('SELECT u.id, u.nome_completo FROM usuario u ORDER BY u.nome_completo ASC ');
-    console.log('Usuários encontrados:', rows);
-    return rows;
-  } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    throw error;
-  } 
-}*/
-
-// Função para consultar todos os usuários ou usuários denunciados
+// Função para consultar todos os usuários ou usuários DENUNCIADOS
 async function consultaUsuarios(filtroDenunciados = false) {
   const conn = await connect();
   try {
@@ -718,6 +704,7 @@ async function consultaUsuarios(filtroDenunciados = false) {
   } 
 }
 
+// Função para cadastrar um novo administrador
 async function cadastrarAdmin(nome_completo, email, senha) {
   const conn = await connect();
 
@@ -763,6 +750,7 @@ async function cadastrarAdmin(nome_completo, email, senha) {
   } 
 }
 
+// Função para consultar todos os administradores
 async function consultarAdmins() {
   const conn = await connect();
   const sql = "SELECT id, nome_completo, email FROM adm ORDER BY nome_completo ASC";
@@ -776,6 +764,7 @@ async function consultarAdmins() {
   } 
 }
 
+// Função para excluir um administrador
 async function excluirAdmin(id) {
   const conn = await connect();
   const sql = "DELETE FROM adm WHERE id = ?";
@@ -793,6 +782,7 @@ async function excluirAdmin(id) {
   } 
 }
 
+// Função para alterar dados de um administrador
 async function alterarAdmin(id, nome_completo, email) {
   const conn = await connect();
 
@@ -847,6 +837,21 @@ async function alterarAdmin(id, nome_completo, email) {
 // Função para excluir um usuário
 async function excluirUsuario(id) {
   const conn = await connect();
+  // Obter denúncias pendentes (para auditoria)
+  const [denuncias] = await conn.query(`
+    SELECT id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia
+    FROM denuncias
+    WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND status = 'PENDENTE'
+  `, [id]);
+  // Registrar na auditoria
+  for (const denuncia of denuncias) {
+    await conn.query(`
+      INSERT INTO auditoria_denuncias (denuncia_id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+      VALUES (?, ?, ?, ?, ?, ?, 'RESOLVIDO', 'RESOLVIDA_POR_EXCLUSAO')
+    `, [denuncia.id, denuncia.tipo, denuncia.usuario_denunciado_id, denuncia.usuario_denunciador_id, denuncia.motivo, denuncia.data_denuncia]);
+  }
+
+  // Excluir o usuário
   const sql = "DELETE FROM usuario WHERE id = ?";
   const values = [id];
 
@@ -862,8 +867,24 @@ async function excluirUsuario(id) {
   }
 }
 
+// Função para excluir um evento 
 async function excluirEventoAdm(evento_id) {
   const conn = await connect();
+  // Obter denúncias pendentes(para auditoria)  
+  const [denuncias] = await conn.query(`
+    SELECT id, tipo, evento_id, usuario_denunciador_id, motivo, data_denuncia
+    FROM denuncias
+    WHERE tipo = 'EVENTO' AND evento_id = ? AND status = 'PENDENTE'
+  `, [evento_id]);
+  // Registrar na auditoria
+  for (const denuncia of denuncias) {
+    await conn.query(`
+      INSERT INTO auditoria_denuncias (denuncia_id, tipo, evento_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+      VALUES (?, ?, ?, ?, ?, ?, 'RESOLVIDO', 'RESOLVIDA_POR_EXCLUSAO')
+    `, [denuncia.id, denuncia.tipo, denuncia.evento_id, denuncia.usuario_denunciador_id, denuncia.motivo, denuncia.data_denuncia]);
+  }
+
+  // Excluir o evento
   const sql = "DELETE FROM evento WHERE id = ?";
   const values = [evento_id];
 
@@ -880,6 +901,7 @@ async function excluirEventoAdm(evento_id) {
   } 
 }
 
+// Função para excluir um comentário 
 async function excluirComentarioAdm(id_comentario) {
   console.log("Excluindo comentário:", id_comentario);
   const conn = await connect();
@@ -904,15 +926,25 @@ async function registrarDenuncia(tipo, evento_id, usuario_denunciado_id, usuario
   let sql, values;
 
   try {
-    // Verificar se já existe denúncia para o mesmo evento e usuário
-    const [existing] = await conn.query(`
-      SELECT 1
-      FROM denuncias
-      WHERE tipo = ? AND evento_id = ? AND usuario_denunciador_id = ?
-    `, [tipo, evento_id, usuario_denunciador_id]);
-    
-    if (existing.length > 0) {
-      throw new Error('Você já denunciou este evento.');
+    // Verificar se já existe denúncia para o mesmo evento ou usuário com o mesmo denunciador
+    if (tipo === "EVENTO") {
+      const [existing] = await conn.query(`
+        SELECT 1
+        FROM denuncias
+        WHERE tipo = 'EVENTO' AND evento_id = ? AND usuario_denunciador_id = ?
+      `, [evento_id, usuario_denunciador_id]);
+      if (existing.length > 0) {
+        throw new Error('Você já denunciou este evento.');
+      }
+    } else if (tipo === "USUARIO") {
+      const [existing] = await conn.query(`
+        SELECT 1
+        FROM denuncias
+        WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND usuario_denunciador_id = ?
+      `, [usuario_denunciado_id, usuario_denunciador_id]);
+      if (existing.length > 0) {
+        throw new Error('Você já denunciou este usuário.');
+      }
     }
     // Validações iniciais
     if (!["EVENTO", "USUARIO"].includes(tipo)) {
@@ -965,19 +997,27 @@ async function registrarDenuncia(tipo, evento_id, usuario_denunciado_id, usuario
     if (result.affectedRows === 0) {
       throw new Error("Falha ao registrar denúncia");
     }
+
+    // Registrar na auditoria
+    await conn.query(`
+      INSERT INTO auditoria_denuncias (denuncia_id, tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'PENDENTE', 'CRIADA')
+    `, [result.insertId, tipo, tipo === "EVENTO" ? evento_id : null, tipo === "USUARIO" ? usuario_denunciado_id : null, usuario_denunciador_id, motivo || null]);
+
     console.log("Denúncia registrada com sucesso!");
   } catch (error) {
-    console.error("Erro ao registrar denúncia:", error);
+    console.log("Erro ao registrar denúncia:", error);
     throw error;
   } 
 }
 
+// Função para consultar denúncias de um usuário específico (para especificar o motivo etc)
 async function consultaDenunciasUsuario(usuarioId) {
   const conn = await connect();
   try {
     console.log(`Consultando denúncias para usuário ID ${usuarioId}...`);
     const [rows] = await conn.query(`
-      SELECT d.motivo, d.data_denuncia, d.usuario_denunciado_id, u.nome_completo AS denunciador
+      SELECT DISTINCT d.motivo, d.data_denuncia, d.usuario_denunciado_id, u.nome_completo AS denunciador
       FROM denuncias d
       LEFT JOIN usuario u ON d.usuario_denunciador_id = u.id
       WHERE d.tipo = 'USUARIO' AND d.usuario_denunciado_id = ?
@@ -1013,7 +1053,7 @@ async function consultaDenunciasEvento(eventoId) {
   }
 }
 
-// Função para consultar eventos denunciados
+// Função para consultar eventos denunciados geral
 async function consultarEventosDenunciados() {
   const conn = await connect();
   try {
@@ -1028,7 +1068,7 @@ async function consultarEventosDenunciados() {
       INNER JOIN denuncias d ON e.id = d.evento_id AND d.tipo = 'EVENTO' AND d.status = 'PENDENTE'
       WHERE e.fim >= NOW()
       ORDER BY e.inicio ASC
-    `;
+    `; // Só consulta os com o status PENDENTE
     console.log("Executando consulta de eventos denunciados:", sql);
     const [rows] = await conn.query(sql);
     console.log("Eventos denunciados encontrados:", rows);
@@ -1039,11 +1079,25 @@ async function consultarEventosDenunciados() {
   } 
 }
 
+// A consulta de usuários denunciados é a mesma que a de usuários, mas com o filtro de denúncias pendentes, lá em cima antes do separador de denuncias
+
 // Função para ignorar denúncias de um usuário específico
 // Atualiza o status das denúncias para 'IGNORADO'
 async function ignorarDenunciasUsuario(usuarioId) {
   const conn = await connect();
   try {
+    // Obter denúncias pendentes
+    const [denuncias] = await conn.query(`
+      SELECT id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia
+      FROM denuncias
+      WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND status = 'PENDENTE'
+    `, [usuarioId]);
+
+    if (denuncias.length === 0) {
+      console.log(`Nenhuma denúncia pendente encontrada para usuário ID ${usuarioId}`);
+      return 0; // Nenhuma denúncia para ignorar
+    }
+
     console.log(`Ignorando denúncias para usuário ID ${usuarioId}...`);
     const [result] = await conn.query(`
       UPDATE denuncias
@@ -1053,6 +1107,15 @@ async function ignorarDenunciasUsuario(usuarioId) {
         AND status = 'PENDENTE'
     `, [usuarioId]);
     console.log('Denúncias ignoradas:', result.affectedRows);
+
+    // Registrar na auditoria
+    for (const denuncia of denuncias) {
+      await conn.query(`
+        INSERT INTO auditoria_denuncias (denuncia_id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+        VALUES (?, ?, ?, ?, ?, ?, 'IGNORADO', 'IGNORADA')
+      `, [denuncia.id, denuncia.tipo, denuncia.usuario_denunciado_id, denuncia.usuario_denunciador_id, denuncia.motivo, denuncia.data_denuncia]);
+    }
+
     return result.affectedRows;
   } catch (error) {
     console.error('Erro ao ignorar denúncias:', error);
@@ -1064,6 +1127,18 @@ async function ignorarDenunciasUsuario(usuarioId) {
 async function ignorarDenunciasEvento(eventoId) {
   const conn = await connect();
   try {
+    // Obter denúncias pendentes
+    const [denuncias] = await conn.query(`
+      SELECT id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia
+      FROM denuncias
+      WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND status = 'PENDENTE'
+    `, [usuarioId]);
+
+    if (denuncias.length === 0) {
+      console.log(`Nenhuma denúncia pendente encontrada para usuário ID ${usuarioId}`);
+      return 0; // Nenhuma denúncia para ignorar
+    }
+
     console.log(`Ignorando denúncias para evento ID ${eventoId}...`);
     const [result] = await conn.query(`
       UPDATE denuncias
@@ -1073,6 +1148,15 @@ async function ignorarDenunciasEvento(eventoId) {
         AND status = 'PENDENTE'
     `, [eventoId]);
     console.log('Denúncias ignoradas:', result.affectedRows);
+
+    // Registrar na auditoria
+    for (const denuncia of denuncias) {
+      await conn.query(`
+        INSERT INTO auditoria_denuncias (denuncia_id, tipo, evento_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+        VALUES (?, ?, ?, ?, ?, ?, 'IGNORADO', 'IGNORADA')
+      `, [denuncia.id, denuncia.tipo, denuncia.evento_id, denuncia.usuario_denunciador_id, denuncia.motivo, denuncia.data_denuncia]);
+    }
+
     return result.affectedRows;
   } catch (error) {
     console.error('Erro ao ignorar denúncias:', error);
