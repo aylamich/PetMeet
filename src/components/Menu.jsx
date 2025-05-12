@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import EditarPerfil from './editarperfil'; // Importa o componente do modal editar perfil usuário
 import EditarPetModal from './editarpetmodal'; // Importa o componente do modal editar perfil pet
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const Menu = () => {
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
   const [showConfUsuario, setShowConfUsuario] = useState(false); // Estado para o menu de configurações do usuário, inicialmente fechado
   const [showProfileModal, setShowProfileModal] = useState(false); // Estado para o modal de visualização do perfil, inicialmente fechado
   const [showEditProfileModal, setShowEditProfileModal] = useState(false); // Estado para o modal de edição perfil usário
@@ -35,7 +37,7 @@ const Menu = () => {
 
   // ******* Funções para buscar dados do usuário na API ********* //
   const buscarDadosUsuario = (usuarioId) => {
-    fetch(`/api/consultausuario?id=${usuarioId}`, { // consultando o usuário pelo ID armazenado no localStorage
+    authFetch(`/api/consultausuario?id=${usuarioId}`, { // consultando o usuário pelo ID armazenado no localStorage
       method: 'GET', // Usando GET, pois estamos consultando por ID
       headers: { 'Content-Type': 'application/json' },
     })
@@ -54,7 +56,7 @@ const Menu = () => {
 
   // ****** Função para buscar dados dos pets do usuário na API ********* //
   const buscarDadosPets = (usuarioId) => {
-    fetch(`/api/consultapets?usuario_id=${usuarioId}`, { // consultando os pets do usuário pelo ID armazenado no localStorage
+    authFetch(`/api/consultapets?usuario_id=${usuarioId}`, { // consultando os pets do usuário pelo ID armazenado no localStorage
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -93,6 +95,11 @@ const Menu = () => {
       // Adiciona um novo pet
       return [...prevPets, petAtualizado]; 
     });
+    // Rebusca os dados dos pets para garantir sincronia com o backend
+    const usuarioId = localStorage.getItem('usuario_id');
+    if (usuarioId) {
+        buscarDadosPets(usuarioId);
+    }
 
     // Fecha os modais após salvar
     setShowEditPetModal(false);
@@ -395,13 +402,12 @@ const Menu = () => {
                 dadosPets.map((pet, index) => (
                   <div key={index} className="flex flex-col md:flex-row gap-6 items-start mb-6">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-red-200 shadow-md bg-gray-100 flex items-center justify-center">
-                      {pet.foto ? (
-                        <img src={`http://localhost:3000${pet.foto}`} alt={`Foto de ${pet.nome}`} className="w-full h-full object-cover" />
-                      ) : (
-                        <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
-                        </svg>
-                      )}
+                          <img
+                          src={`/api/pet/foto/${pet.id}?t=${Date.now()}`} // URL da imagem do pet, com timestamp para evitar cache
+                          alt={`Foto de ${pet.nome}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => (e.target.src = '/placeholder.jpg')} // Imagem padrão se falhar
+                        />   
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
                       <div>

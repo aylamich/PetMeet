@@ -1,57 +1,43 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 const MenuAdm = () => {
-  const [showConfUsuario, setShowConfUsuario] = useState(false); // Estado para o painel lateral
-  const [showProfileModal, setShowProfileModal] = useState(false); // Estado para o modal de visualização do perfil
-  const [showNavMenu, setShowNavMenu] = useState(false); // Estado para o menu hamburger
-  const [usuario, setUsuario] = useState("Administrador"); // Nome do admin
+  const { user, logout } = useContext(AuthContext);
+  const [showConfUsuario, setShowConfUsuario] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
+  const [usuario, setUsuario] = useState("Administrador");
 
   useEffect(() => {
-    const nomeUsuario = localStorage.getItem("usuarioNome");
-    const tipo = localStorage.getItem("tipo");
-
-    // Verifica se é admin; se não, redireciona para login
-    if (tipo !== "adm") {
+    if (!user) {
       window.location.href = "/login";
       return;
     }
-
-    if (nomeUsuario) {
-      setUsuario(nomeUsuario); // Atualiza o nome do admin
+    if (user.tipo !== "adm") {
+      logout();
+      window.location.href = "/login";
+      return;
     }
-  }, []);
+    setUsuario(user.nome); // pega do authcontext o nome para exibir no menu
+  }, [user, logout]);
 
-  // Função para logout
-  const handleLogout = () => {
-    localStorage.removeItem("usuario_id");
-    localStorage.removeItem("usuarioNome");
-    localStorage.removeItem("email");
-    localStorage.removeItem("tipo");
-    window.location.href = "/login";
-  };
-
-  // Função para alternar o painel lateral
   const exibeConfUsuario = () => {
     setShowConfUsuario(!showConfUsuario);
   };
 
-  // Função para abrir/fechar o modal de perfil
   const openProfileModal = () => {
     setShowProfileModal(true);
   };
 
-  // Função para alternar o menu hamburger
   const toggleNavMenu = () => {
     setShowNavMenu(!showNavMenu);
   };
 
   return (
     <>
-      {/* Barra de navegação fixa no topo */}
       <nav className="fixed top-0 left-0 w-full bg-white shadow-md py-4 px-6 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          {/* Botão de menu hamburger (visível apenas em telas pequenas) */}
           <button
             type="button"
             onClick={toggleNavMenu}
@@ -66,9 +52,8 @@ const MenuAdm = () => {
               )}
             </svg>
           </button>
-          {/* Botão sair */}
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-2 text-black hover:text-gray-600 font-medium"
           >
             <svg
@@ -89,7 +74,6 @@ const MenuAdm = () => {
           </button>
         </div>
 
-        {/* Links de navegação (visíveis em telas grandes) */}
         <ul className="hidden md:flex space-x-8 text-black font-medium">
           <li>
             <Link to="/gerenciareventos" className="hover:text-gray-600 transition">
@@ -108,14 +92,12 @@ const MenuAdm = () => {
           </li>
         </ul>
 
-        {/* Drawer de navegação para telas pequenas */}
         <div
           id="nav-drawer"
           className={`fixed top-0 left-0 z-50 h-screen w-64 bg-white shadow-lg transform transition-transform duration-300 ${
             showNavMenu ? "translate-x-0" : "-translate-x-full"
           } flex flex-col p-6`}
         >
-          {/* Botão de fechar o drawer */}
           <button
             onClick={toggleNavMenu}
             type="button"
@@ -140,7 +122,6 @@ const MenuAdm = () => {
             <span className="sr-only">Fechar</span>
           </button>
 
-          {/* Links de navegação no drawer */}
           <ul className="flex flex-col space-y-4 mt-8 text-black font-medium">
             <li>
               <Link
@@ -172,7 +153,6 @@ const MenuAdm = () => {
           </ul>
         </div>
 
-        {/* Nome do admin e ícone de perfil */}
         <div className="flex items-center space-x-3">
           <span className="text-black font-medium">Olá, {usuario}</span>
           <div className="items-center ms-3">
@@ -203,7 +183,6 @@ const MenuAdm = () => {
         </div>
       </nav>
 
-      {/* Painel lateral de configurações */}
       <div
         id="drawer-contact"
         className={`fixed top-0 right-0 z-40 h-screen p-6 bg-white w-[400px] transition-transform ${
@@ -235,7 +214,6 @@ const MenuAdm = () => {
 
         <div className="w-full max-w-md mt-16">
           <h2 className="text-2xl font-bold mb-6 text-black">Configurações</h2>
-          {/* Botões do painel lateral */}
           <div className="space-y-4 w-full">
             <button
               onClick={openProfileModal}
@@ -244,7 +222,7 @@ const MenuAdm = () => {
               <h3 className="font-medium text-black">Ver Perfil</h3>
             </button>
             <button
-              onClick={handleLogout}
+              onClick={logout}
               className="w-full mt-8 p-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
             >
               <svg
@@ -267,7 +245,6 @@ const MenuAdm = () => {
         </div>
       </div>
 
-      {/* Modal de Visualização do Perfil */}
       <div
         className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${
           showProfileModal ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -301,7 +278,6 @@ const MenuAdm = () => {
           </div>
 
           <div className="p-6">
-            {/* Informações do admin */}
             <div className="mb-8">
               <h4 className="text-lg font-semibold text-black mb-4 border-b border-gray-200 pb-2">
                 Informações Pessoais
@@ -309,7 +285,7 @@ const MenuAdm = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <p className="text-gray-600">Nome Completo</p>
-                  <p className="font-medium">{localStorage.getItem("usuarioNome") || "Não informado"}</p>
+                  <p className="font-medium">{user?.nome || "Não informado"}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Email</p>

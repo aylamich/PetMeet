@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Menu from "../components/MenuAdm";
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const CadastrarAdmin = () => {
   const [admins, setAdmins] = useState([]);
@@ -9,6 +10,7 @@ const CadastrarAdmin = () => {
   const [editandoAdmin, setEditandoAdmin] = useState(null);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   const [formData, setFormData] = useState({
     nome_completo: "",
@@ -33,7 +35,7 @@ const CadastrarAdmin = () => {
       return;
     }
     try {
-      const response = await fetch("/api/consultaradmins", {
+      const response = await authFetch("/api/consultaradmins", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -137,7 +139,7 @@ const CadastrarAdmin = () => {
         ? { id: editandoAdmin.id, nome_completo: formData.nome_completo, email: formData.email }
         : formData;
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -179,7 +181,7 @@ const CadastrarAdmin = () => {
 
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluiradmin", {
+      const response = await authFetch("/api/excluiradmin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: adminParaExcluir.id }),

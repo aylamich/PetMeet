@@ -6,7 +6,8 @@ const db = require('./db.js'); // Importa o módulo de banco de dados (db.js) pa
 const cors = require('cors'); // Importa o módulo CORS para permitir requisições de diferentes origens
 const multer = require('multer'); // Importa o módulo Multer para manipulação de uploads de arquivos
 const bodyParser = require('body-parser'); // Importa o módulo body-parser para analisar o corpo das requisições
-
+require('dotenv').config(); // Carrega variáveis de ambiente do arquivo .env
+const verifyToken = require('./authMiddleware'); // Importa o middleware de autenticação para verificar tokens JWT
 //const fileURLToPath = require('url'); // Não estou usando
 
 // Log para verificar a importação do db
@@ -20,32 +21,31 @@ app.use(cors({
   allowedHeaders: ['Content-Type'], // Permite o cabeçalho necessário para multipart/form-data
 }));
 
-// Configura o Express para servir arquivos estáticos da pasta 'uploads'
-app.use('/uploads', express.static('uploads'));
-// Servir ficheiros estáticos (como o HTML)
-app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(express.json()); // Configura o Express para processar JSON no corpo das requisições
-
-
-// Configuração do multer para gerenciar upload arquivos
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Pasta onde as fotos serão salvas
-  },
-  filename: (req, file, cb) => {
-    // Gera um nome único com timestamp + nome original
-    cb(null, Date.now() + '-' + file.originalname); // Nome único para o arquivo
-  },
-});
-
-// Instancia o multer com configurações de armazenamento e limite de tamanho
+// Configuração do Multer para processar arquivos em memória (não salvar no disco)
+const storage = multer.memoryStorage(); // Armazena o arquivo em memória como Buffer
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB em bytes
+  limits: { fileSize: 10 * 1024 * 1024 }, // Limite de 10 MB
 });
-
 // Importa bcrypt para comparação de senhas criptografadas
 const bcrypt = require('bcrypt'); // Importando bcrypt para hash de senhas
+
+// Parte de token, autenticação etc
+const jwt = require('jsonwebtoken'); // Importa o módulo jsonwebtoken para criar e verificar tokens JWT
+
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Token inválido ou expirado' });
+  }
+};
 
 
 // Rota GET de teste que retorna uma mensagem JSON
@@ -98,6 +98,7 @@ app.post('/api/login', async (req, res) => {
     // Extrai email e senha do corpo da requisição
     const { email, senha } = req.body;
     console.log('Tentativa de login:', email);
+    
 
     // Busca usuário por email
     const usuario = await db.buscarUsuarioPorEmail(email);
@@ -107,10 +108,17 @@ app.post('/api/login', async (req, res) => {
         console.error('Hash inválido para usuário:', email);
         return res.status(500).json({ error: 'Erro na configuração do servidor' });
       }
+      // Usa brcrypt.compare para verificar a senha
       const senhaValida = await bcrypt.compare(senha, usuario.senha); // Verifica se a senha é válida
       if (senhaValida) {
+        // Gera token JWT
+        const token = jwt.sign(
+          { id: usuario.id, tipo: 'usuario' },
+          process.env.JWT_SECRET,
+          { expiresIn: '1h' }
+        );
         console.log('Login bem-sucedido (usuário):', email);
-        return res.json({ usuario_id: usuario.id, nome: usuario.nome_completo, tipo: 'usuario' });
+        return res.json({ usuario_id: usuario.id, nome: usuario.nome_completo, tipo: 'usuario', token });
       }
     }
 
@@ -124,8 +132,14 @@ app.post('/api/login', async (req, res) => {
       }
       const senhaValida = await bcrypt.compare(senha, adm.senha); // Verifica se a senha é válida
       if (senhaValida) {
+        // Gera token JWT
+        const token = jwt.sign(
+          { id: adm.id, tipo: 'adm' },
+          process.env.JWT_SECRET,
+          { expiresIn: '1h' }
+        );
         console.log('Login bem-sucedido (admin):', email);
-        return res.json({ id: adm.id, nome: adm.nome_completo, tipo: 'adm'
+        return res.json({ usuario_id: adm.id, nome: adm.nome_completo, tipo: 'adm', token
         });
       }
     }
@@ -161,7 +175,7 @@ app.post('/api/cadastrousuario', async (req, res) => {
 });
 
 // Rota para consultar os usuários por ID
-app.get('/api/consultausuario', async (req, res) => {
+app.get('/api/consultausuario', authMiddleware, async (req, res) => {
   try {
     // Extrai ID do usuário dos parâmetros de query
       const usuario_id = req.query.id;
@@ -186,7 +200,7 @@ app.get('/api/consultausuario', async (req, res) => {
 });
 
 // Rota para alterar os dados do usuário
-app.post('/api/alterarusuario', async (req, res) => {
+app.post('/api/alterarusuario', authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { usuario_id, nome_completo, email, genero, data_nascimento, uf, id_cidade, senha } = req.body;
 
@@ -216,7 +230,7 @@ app.post('/api/alterarusuario', async (req, res) => {
 });
 
 // Rota para editar os dados do usuário
-  app.post('/api/editarusuario', async (req, res) =>  {  
+  app.post('/api/editarusuario', authMiddleware, async (req, res) =>  {  
     const {id} = req.body;
 
     let resultado = await db.consultaUsuarioPorId(id); 
@@ -234,13 +248,15 @@ app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
     // Extrai os dados do formulário
     const { nome, sexo, data_nascimento, porte, raca } = req.body;
     const usuario_id = req.body.usuario_id;
-    // Define o caminho da foto, se enviada
-    const foto = req.file ? `/uploads/${req.file.filename}` : null;
+    //const foto = req.file ? `/uploads/${req.file.filename}` : null;
 
     // Validação campos obrigatórios
     if (!nome || !sexo || !data_nascimento || !porte) {
       return res.status(400).json({ error: 'Dados incompletos' });
     }
+
+    // Obtém o Buffer da imagem, se enviada
+    const foto = req.file ? req.file.buffer : null;
 
     // Chama a função do banco de dados
     const petId = await db.cadastrarPet(usuario_id, foto, nome, sexo, data_nascimento, porte, raca || null);
@@ -264,8 +280,27 @@ app.post('/api/cadastropet', upload.single('fotoPet'), async (req, res) => {
   }
 });
 
+// Consulta foto pet
+app.get('/api/pet/foto/:petId', async (req, res) => {
+  try {
+      const petId = req.params.petId;
+      const foto = await db.consultarFoto(petId);
+
+      if (!foto) {
+          return res.status(404).json({ error: 'Imagem não encontrada' });
+      }
+
+      // Define o Content-Type como imagem
+      res.set('Content-Type', 'image/jpg'); // Ajuste conforme o tipo da imagem
+      res.send(foto); // Envia o Buffer da imagem
+  } catch (error) {
+      console.error('Erro ao recuperar imagem:', error);
+      res.status(500).json({ error: 'Erro ao recuperar imagem' });
+  }
+});
+
 // Rota para consultar os pets por ID do dono
-app.post('/api/consultapetpordono', async (req, res) =>  {
+app.post('/api/consultapetpordono', authMiddleware, async (req, res) =>  {
   // Extrai ID do usuário do corpo da requisição
   const {usuarioSelecionado} = req.body;
   let resultado = await db.consultaPetPorDono(usuarioSelecionado);
@@ -274,7 +309,7 @@ app.post('/api/consultapetpordono', async (req, res) =>  {
 });
 
 // Rota para buscar pets do usuário
-app.get('/api/consultapets', async (req, res) => {
+app.get('/api/consultapets', authMiddleware, async (req, res) => {
   try {
     // Extrai ID do usuário dos parâmetros de query
       const usuario_id = req.query.usuario_id;
@@ -293,11 +328,11 @@ app.get('/api/consultapets', async (req, res) => {
 });
 
 // Rota para alterar os dados do pet
-app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
+app.post('/api/alterarpet', upload.single('fotoPet'), authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
-  const { pet_id, nome, sexo, data_nascimento, porte, raca, fotoAtual } = req.body;
+  const { pet_id, nome, sexo, data_nascimento, porte, raca } = req.body;
   // Usa nova foto, se enviada, ou mantém a foto atual
-  const foto = req.file ? `/uploads/${req.file.filename}` : fotoAtual; // Caminho relativo da nova foto
+  const foto = req.file ? req.file.buffer : null;
 
   try {
     // Chama a função do db.js para atualizar pet
@@ -312,7 +347,7 @@ app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
         data_nascimento,
         porte,
         raca,
-        foto, // Retorna o caminho real da foto
+        //foto, // Retorna o caminho real da foto
       },
     });
   } catch (error) {
@@ -322,7 +357,7 @@ app.post('/api/alterarpet', upload.single('fotoPet'), async (req, res) => {
 });
 
 // Rota para deletar pet
-app.delete('/api/deletarpet', async (req, res) => {
+app.delete('/api/deletarpet', authMiddleware, async (req, res) => {
   // Extrai ID do pet dos parâmetros de query
   const { pet_id } = req.query;
   console.log('Recebida requisição para excluir pet ID:', pet_id);
@@ -342,11 +377,10 @@ app.delete('/api/deletarpet', async (req, res) => {
 });
 
 // Rota para criar um novo evento
-app.post('/api/criarevento', upload.single("fotoPet"), async (req, res) => {
+app.post('/api/criarevento', upload.single("fotoPet"), authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { id_usuario, nome_evento, inicio, fim, uf, id_cidade, bairro,  rua, numero, descricao, porte, sexo, complemento, raca, } = req.body;
-  // Define o caminho da foto, se enviada
-  const foto = req.file ? `/uploads/${req.file.filename}` : null;
+  const foto = req.file ? req.file.buffer : null; // Usa o Buffer da imagem
 
   // Valida se id_usuario foi fornecido
   if (!id_usuario) {
@@ -378,8 +412,27 @@ app.post('/api/criarevento', upload.single("fotoPet"), async (req, res) => {
   }
 });
 
+// Consulta foto evento
+app.get('/api/evento/foto/:eventoId', async (req, res) => {
+  try {
+    const eventoId = req.params.eventoId;
+    const foto = await db.consultarFotoEvento(eventoId);
+
+    if (!foto) {
+      return res.status(404).json({ error: 'Imagem não encontrada' });
+    }
+
+    // Define o Content-Type como imagem
+    res.set('Content-Type', 'image/jpg'); // Igual ao pet
+    res.send(foto); // Envia o Buffer da imagem
+  } catch (error) {
+    console.error('Erro ao recuperar imagem:', error);
+    res.status(500).json({ error: 'Erro ao recuperar imagem' });
+  }
+});
+
 // Rota para consultar eventos
-app.post('/api/consultareventos', async (req, res) => {
+app.post('/api/consultareventos', authMiddleware, async (req, res) => {
   // Extrai filtros do corpo da requisição
   const filtro = req.body;
   try {
@@ -396,7 +449,7 @@ app.post('/api/consultareventos', async (req, res) => {
 });
 
 // Rota para consultar eventos criados por um usuário
-app.post('/api/consultareventoscriados', async (req, res) => {
+app.post('/api/consultareventoscriados', authMiddleware, async (req, res) => {
   // Extrai ID do usuário do corpo da requisição
   const { id_usuario } = req.body;
   if (!id_usuario) { // Valida se o ID foi fornecido
@@ -415,7 +468,7 @@ app.post('/api/consultareventoscriados', async (req, res) => {
 });
 
 // Rota para inscrever um usuário em um evento
-app.post("/api/inscrever", async (req, res) => {
+app.post("/api/inscrever", authMiddleware, async (req, res) => {
   console.log("Corpo da requisição:", req.body);
 
   try {
@@ -455,7 +508,7 @@ app.post("/api/inscrever", async (req, res) => {
 });
 
 // Rota para buscar eventos inscritos por um usuário
-app.post("/api/eventosInscritos", async (req, res) => {
+app.post("/api/eventosInscritos", authMiddleware, async (req, res) => {
   console.log("Corpo da requisição:", req.body);
 
   try {
@@ -487,7 +540,7 @@ app.post("/api/eventosInscritos", async (req, res) => {
 });
 
 // Rota para desinscrever um usuário de um evento
-app.post("/api/desinscrever", async (req, res) => {
+app.post("/api/desinscrever", authMiddleware, async (req, res) => {
   console.log("Corpo da requisição:", req.body);
 
   try {
@@ -522,11 +575,11 @@ app.post("/api/desinscrever", async (req, res) => {
  
 
 // Nova rota para alterar evento
-app.post('/api/alterarevento', upload.single("fotoPet"), async (req, res) => {
+app.post('/api/alterarevento', upload.single("fotoPet"), authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
-  const { evento_id, id_usuario, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento,   raca, } = req.body;
-  // Define o caminho da foto, se enviada
-  const foto = req.file ? `/uploads/${req.file.filename}` : null;
+  const { evento_id, id_usuario, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca, } = req.body;
+  // Usa nova foto como BLOB, se enviada
+  const foto = req.file ? req.file.buffer : null;
 
   // Valida campos obrigatórios
   if (!evento_id || !id_usuario) {
@@ -549,7 +602,7 @@ app.post('/api/alterarevento', upload.single("fotoPet"), async (req, res) => {
 
   try {
     // Chama a função do db.js para atualizar evento
-    const updated = await db.alterarEvento( evento_id, id_usuario,    foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo,      complemento, raca );
+    const updated = await db.alterarEvento( evento_id, id_usuario, foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca );
     // Verifica se a atualização foi bem-sucedida
     if (updated) {
       res.json({ message: `Evento "${nome_evento}" atualizado com sucesso!` });
@@ -564,7 +617,7 @@ app.post('/api/alterarevento', upload.single("fotoPet"), async (req, res) => {
 });
 
 // Rota para excluir evento
-app.post('/api/excluirevento', async (req, res) => {
+app.post('/api/excluirevento', authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { evento_id, id_usuario } = req.body;
 
@@ -590,7 +643,7 @@ app.post('/api/excluirevento', async (req, res) => {
 }); 
 
 // Criar um comentário, somente nas paginas eventos criados e eventos inscritos
-app.post("/api/comentarios", async (req, res) => {
+app.post("/api/comentarios", authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { id_evento, id_usuario, comentario } = req.body;
 
@@ -619,7 +672,7 @@ app.post("/api/comentarios", async (req, res) => {
 });
 
 // Consultar comentários de um evento
-app.post("/api/consultarcomentarios", async (req, res) => {
+app.post("/api/consultarcomentarios", authMiddleware, async (req, res) => {
   // Extrai ID do evento do corpo da requisição
   const { id_evento } = req.body;
   console.log("Recebido id_evento:", id_evento);
@@ -643,7 +696,7 @@ app.post("/api/consultarcomentarios", async (req, res) => {
 });
 
 // Rota para excluir um comentário
-app.post("/api/excluircomentario", async (req, res) => {
+app.post("/api/excluircomentario", authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { id_comentario, id_usuario } = req.body;
   console.log("Recebido para exclusão:", { id_comentario, id_usuario });
@@ -665,7 +718,7 @@ app.post("/api/excluircomentario", async (req, res) => {
 });
 
 // Rota para editar um comentário
-app.post("/api/editarcomentario", async (req, res) => {
+app.post("/api/editarcomentario", authMiddleware, async (req, res) => {
   // Extrai dados do corpo da requisição
   const { id_comentario, id_usuario, comentario } = req.body;
   console.log("Recebido para edição:", { id_comentario, id_usuario, comentario });
@@ -693,7 +746,7 @@ app.post("/api/editarcomentario", async (req, res) => {
 });
 
 // Rota para consultar inscritos
-app.get("/api/consultarinscritos", async (req, res) => {
+app.get("/api/consultarinscritos", authMiddleware, async (req, res) => {
   // Extrai ID do evento dos parâmetros de query
   const { evento_id } = req.query;
 
@@ -715,19 +768,9 @@ app.get("/api/consultarinscritos", async (req, res) => {
 
 
 // ****************************** MODO ADMIN ****************************** //
-/*app.get("/api/consultausuarios", async (req, res) => {
-  try {
-    console.log('Recebida requisição para /api/consultausuarios');
-    const usuarios = await db.consultaUsuarios();
-    res.json(usuarios);
-  } catch (error) {
-    console.error('Erro na rota /api/consultausuarios:', error.message, error.stack);
-    res.status(500).json({ error: 'Erro ao buscar usuários' });
-  }
-});*/
 
 // Rota para consultar usuários (atualizada para suportar filtro)
-app.get("/api/consultausuarios", async (req, res) => {
+app.get("/api/consultausuarios", authMiddleware, async (req, res) => {
   try {
     const filtroDenunciados = req.query.filtro === 'denunciados';
     const usuarios = await db.consultaUsuarios(filtroDenunciados);
@@ -767,7 +810,7 @@ app.get("/api/consultaradmins", async (req, res) => {
 });
 
 // Rota para excluir administrador
-app.post("/api/excluiradmin", async (req, res) => {
+app.post("/api/excluiradmin", authMiddleware, async (req, res) => {
   const { id } = req.body;
 
   if (!id) {
@@ -784,7 +827,7 @@ app.post("/api/excluiradmin", async (req, res) => {
 });
 
 // Rota para atualizar um administrador
-app.post("/api/alteraradmin", async (req, res) => {
+app.post("/api/alteraradmin", authMiddleware, async (req, res) => {
   const { id, nome_completo, email } = req.body;
 
   if (!id || !nome_completo || !email) {
@@ -801,7 +844,7 @@ app.post("/api/alteraradmin", async (req, res) => {
 });
 
 // Rota para excluir usuário (admin)
-app.post("/api/excluirusuario", async (req, res) => {
+app.post("/api/excluirusuario", authMiddleware, async (req, res) => {
   console.log("Rota /api/excluirusuario chamada com body:", req.body);
   const { usuario_id } = req.body;
 
@@ -827,7 +870,7 @@ app.post("/api/excluirusuario", async (req, res) => {
 });
 
 // Rota para excluir evento (admin)
-app.post("/api/excluireventoadm", async (req, res) => {
+app.post("/api/excluireventoadm", authMiddleware, async (req, res) => {
   console.log("Requisição recebida em /api/excluireventoadm:", req.body);
   const { evento_id } = req.body;
 
@@ -852,7 +895,7 @@ app.post("/api/excluireventoadm", async (req, res) => {
   }
 });
 
-app.post("/api/excluircomentarioadm", async (req, res) => {
+app.post("/api/excluircomentarioadm", authMiddleware, async (req, res) => {
   console.log("Requisição recebida em /api/excluircomentarioadm:", req.body);
   const { id_comentario } = req.body;
 
@@ -875,7 +918,7 @@ app.post("/api/excluircomentarioadm", async (req, res) => {
 
 // ********* DENUNCIAS ********* //
 // Rota para registrar denúncia
-app.post("/api/denunciar", async (req, res) => {
+app.post("/api/denunciar", authMiddleware, async (req, res) => {
   const { tipo, evento_id, usuario_denunciado_id, usuario_denunciador_id, motivo } = req.body;
 
   // Validações do corpo da requisição
@@ -904,7 +947,7 @@ app.post("/api/denunciar", async (req, res) => {
 });
 
 // Rota para consultar denúncias de um usuário
-app.get("/api/consultardenunciasusuario", async (req, res) => {
+app.get("/api/consultardenunciasusuario", authMiddleware, async (req, res) => {
   try {
     const usuarioId = req.query.usuario_id;
     if (!usuarioId) {
@@ -919,7 +962,7 @@ app.get("/api/consultardenunciasusuario", async (req, res) => {
 });
 
 // Rota para consultar denúncias de um evento
-app.get("/api/consultardenunciasevento", async (req, res) => {
+app.get("/api/consultardenunciasevento", authMiddleware, async (req, res) => {
   try {
     const eventoId = req.query.evento_id;
     if (!eventoId) {
@@ -934,7 +977,7 @@ app.get("/api/consultardenunciasevento", async (req, res) => {
 });
 
 // Rota para consultar eventos denunciados
-app.get("/api/consultareventosdenunciados", async (req, res) => {
+app.get("/api/consultareventosdenunciados", authMiddleware, async (req, res) => {
   try {
     const eventos = await db.consultarEventosDenunciados();
     res.json(eventos);
@@ -963,7 +1006,7 @@ app.post("/api/ignorardenunciasusuario", async (req, res) => {
 });
 
 // Rota para ignorar eventos denunciados
-app.post("/api/ignorardenunciasevento", async (req, res) => {
+app.post("/api/ignorardenunciasevento", authMiddleware, async (req, res) => {
   try {
     const { evento_id } = req.body;
     if (!evento_id) {
@@ -980,11 +1023,28 @@ app.post("/api/ignorardenunciasevento", async (req, res) => {
   }
 });
 
+app.post("/api/resolverdenunciasusuario", authMiddleware, async (req, res) => {
+  try {
+    const { usuario_id } = req.body;
+    if (!usuario_id) {
+      return res.status(400).json({ error: "ID do usuário é obrigatório" });
+    }
+    const affectedRows = await db.resolverDenunciasUsuario(usuario_id);
+    if (affectedRows === 0) {
+      return res.status(200).json({ message: "Nenhuma denúncia pendente encontrada para resolver" });
+    }
+    res.status(200).json({ message: "Denúncias resolvidas com sucesso" });
+  } catch (error) {
+    console.error("Erro na rota /resolverdenunciasusuario:", error);
+    res.status(500).json({ error: "Erro ao resolver denúncias" });
+  }
+});
+
 // Configura o body-parser para processar JSON e formulários com limite de 10MB
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+//app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Iniciar o servidor
 app.listen(port, () => {

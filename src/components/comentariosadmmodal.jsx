@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const ComentariosAdmModal = ({ idEvento, isOpen, onClose }) => {
   const [comentarios, setComentarios] = useState([]);
@@ -7,12 +8,13 @@ const ComentariosAdmModal = ({ idEvento, isOpen, onClose }) => {
   const [mostrarModalConfirmacao, setMostrarModalConfirmacao] = useState(false);
   const [idComentarioParaExcluir, setIdComentarioParaExcluir] = useState(null);
   const comentariosRef = useRef(null);
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   // Busca a lista de comentários associados ao evento
   const fetchComentarios = async () => {
     try {
       console.log("Enviando idEvento:", idEvento);
-      const response = await fetch("/api/consultarcomentarios", {
+      const response = await authFetch("/api/consultarcomentarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_evento: idEvento }),
@@ -48,7 +50,7 @@ const ComentariosAdmModal = ({ idEvento, isOpen, onClose }) => {
   // Confirma a exclusão do comentário
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluircomentarioadm", {
+      const response = await authFetch("/api/excluircomentarioadm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_comentario: idComentarioParaExcluir }),

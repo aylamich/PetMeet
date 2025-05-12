@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 function EditarPerfil({ onClose, onSave }) { // Usa mesma lógica do cadastro de usuário, só muda o endpoint e o método
   // Declarações de estados para os campos do formulário, mesma coisa do cadastro usuário
@@ -20,6 +21,8 @@ function EditarPerfil({ onClose, onSave }) { // Usa mesma lógica do cadastro de
   const [cidades, setCidades] = useState([]);
   const [cidadeSelecionada, setCidadeSelecionada] = useState('');
 
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
+
   // Estado para os dados do usuário
   const [dadosUsuario, setDadosUsuario] = useState(null);
 
@@ -27,7 +30,7 @@ function EditarPerfil({ onClose, onSave }) { // Usa mesma lógica do cadastro de
   useEffect(() => {
     const usuarioId = localStorage.getItem('usuario_id');
     if (usuarioId) {
-      fetch(`/api/consultausuario?id=${usuarioId}`) // Busca os dados do usuário pelo ID armazenado no localStorage para preencher o formulário
+      authFetch(`/api/consultausuario?id=${usuarioId}`) // Busca os dados do usuário pelo ID armazenado no localStorage para preencher o formulário
         .then(response => {
           if (!response.ok) throw new Error('Erro ao buscar usuário');
           return response.json();
@@ -181,7 +184,7 @@ function EditarPerfil({ onClose, onSave }) { // Usa mesma lógica do cadastro de
 
     try {
       // ***** Envia os dados atualizados para o servidor ***** //
-      const response = await fetch('/api/alterarusuario', {
+      const response = await authFetch('/api/alterarusuario', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

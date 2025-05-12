@@ -11,6 +11,7 @@ function Cadastro() {
   const [dataNascimentoErro, setDataNascimentoErro] = useState(''); // Inicializa o estado dataNascimentoErro com um valor inicial de '' (string vazia). 
   const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para mostrar/esconder a senha
   const [erroGeral, setErroGeral] = useState(''); // Estado para erros gerais 
+  const [nomeErro, setNomeErro] = useState('');
 
   // Estados para os requisitos da senha
   const [temMinimoCaracteres, setTemMinimoCaracteres] = useState(false); // Todos inicializam falsos
@@ -20,6 +21,8 @@ function Cadastro() {
 
   const handleNomeCompletoChange = (event) => {
     event.target.value = event.target.value.replace(/\d/g, ''); // Não deixa digitar números substituindo por string vazia
+    event.target.value = valor;
+    validarNomeCompleto(valor); // Valida o nome em tempo real
   };
 
   const handleSenhaFocus = () => {
@@ -102,6 +105,25 @@ function Cadastro() {
     }
   };
 
+  const validarNomeCompleto = (nome) => {
+    // Remove espaços extras e verifica o comprimento
+    const nomeTrim = nome.trim();
+    if (nomeTrim.length < 3) {
+      setNomeErro('O nome completo deve ter pelo menos 3 caracteres.');
+      return false;
+    }
+  
+    // Verifica se há pelo menos duas palavras
+    const palavras = nomeTrim.split(/\s+/).filter((palavra) => palavra.length > 0);
+    if (palavras.length < 2) {
+      setNomeErro('O nome completo deve conter pelo menos duas palavras (nome e sobrenome).');
+      return false;
+    }
+  
+    setNomeErro('');
+    return true;
+  };
+
   // ---------------------------------------------------- //-------------------------------------------------- //
   // Script
   // Campo cidade e estado
@@ -150,6 +172,7 @@ function Cadastro() {
     setSenhaErro('');
     setDataNascimentoErro('');
     setEmailErro('');
+    setNomeErro('');
     setErroGeral(''); // Limpar erro geral
 
     // Pegar os valores do formulário
@@ -163,6 +186,11 @@ function Cadastro() {
       id_cidade: formData.get('cbcidade'), 
       senha: formData.get('senha'),
     };
+
+    // Validar os campos
+    if (!validarNomeCompleto(dadosUsuario.nome_completo)) {
+      return;
+    }
 
     // Validar os campos
     if (!validarDataNascimento(dadosUsuario.data_nascimento)) {
@@ -246,8 +274,10 @@ function Cadastro() {
               </label>
               <input type="text" id="nomeCompleto" name="nome_completo" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
                 onChange={handleNomeCompletoChange} // Chama a função para não deixar digitar números
+                onBlur={(e) => validarNomeCompleto(e.target.value)}
                 required
               />
+            {nomeErro && <p className="text-sm text-red-500 mt-2">{nomeErro}</p>}
             </div>
 
             {/* Campo de Email */}

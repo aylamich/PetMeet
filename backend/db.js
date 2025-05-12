@@ -33,7 +33,7 @@ async function login(usuario, senha) {
     return rows; // Retorna resultados (array de objetos)
 }
 
-// Função para buscar usuário por email, estou usando esse para autenticação
+// Função para buscar usuário por email, estou usando esse para autenticação (login)
 async function buscarUsuarioPorEmail(email) {
     const conn = await connect();
     try {
@@ -103,7 +103,7 @@ async function cadastrarUsuario(nome_completo, email, genero, data_nascimento, u
     }
   }
 
-// Função para consultar usuário por ID
+// Função para consultar usuário por ID, esse eu uso para consulta mesmo
   async function consultaUsuarioPorId(id) {
     const conn = await connect();
     try {
@@ -204,11 +204,24 @@ async function cadastrarPet(usuario_id, foto, nome, sexo, data_nascimento, porte
     }
 }
 
+// Função para consultar a foto de um pet por ID
+async function consultarFoto(petId) {
+  const conn = await connect();
+  const sql = "SELECT foto FROM pet WHERE id = ?";
+  try {
+      const [rows] = await conn.query(sql, [petId]);
+      return rows[0]?.foto || null; // Retorna o Buffer da foto ou null se não encontrado
+  } catch (error) {
+      console.error('Erro ao consultar foto:', error);
+      throw error;
+  }
+}
+
 // Função para consultar pet por ID
 async function consultaPetPorId(id) {
     const conn = await connect();
     // Query SQL para buscar detalhes do pet e do dono
-    const sql = "SELECT p.id, p.foto, p.nome, p.sexo, p.idade, p.porte, p.raca, u.id AS usuario_id, u.nome_completo AS dono_nome FROM pet p JOIN usuario u ON p.usuario_id = u.id WHERE p.id = ?";
+    const sql = "SELECT p.id, p.nome, p.sexo, p.idade, p.porte, p.raca, u.id AS usuario_id, u.nome_completo AS dono_nome FROM pet p JOIN usuario u ON p.usuario_id = u.id WHERE p.id = ?";
     const [rows] = await conn.query(sql, [id]); // Executa a query com o ID do pet
     // Retorna o primeiro pet encontrado
     return rows[0];
@@ -228,9 +241,7 @@ async function consultaPetsPorUsuario(usuario_id) {
     try {
       // Query SQL para buscar pets com formatação de data e tratamento de foto
         const [rows] = await conn.query(
-            `SELECT id, 
-                   CASE WHEN foto IS NOT NULL THEN foto ELSE NULL END as foto,
-                    nome, sexo, DATE_FORMAT(data_nascimento, '%Y-%m-%d') as data_nascimento, porte, raca 
+            `SELECT id, nome, sexo, DATE_FORMAT(data_nascimento, '%Y-%m-%d') as data_nascimento, porte, raca 
              FROM pet 
              WHERE usuario_id = ?`,
             [usuario_id]
@@ -250,19 +261,11 @@ async function alterarPet(pet_id, nome, sexo, data_nascimento, porte, raca, foto
       // Query SQL para atualizar pet, incluindo foto apenas se fornecida
       const sql = `
         UPDATE pet 
-        SET nome = ?, sexo = ?, data_nascimento = ?, porte = ?, raca = ?, foto = ? 
+        SET nome = ?, sexo = ?, data_nascimento = ?, porte = ?, raca = ?, foto = COALESCE(?, foto) 
         WHERE id = ?
       `;
       // Query SQL para atualizar pet
-      const values = [
-        nome !== undefined ? nome : null,
-        sexo !== undefined ? sexo : null,
-        data_nascimento !== undefined ? data_nascimento : null,
-        porte !== undefined ? porte : null,
-        raca !== undefined ? raca : null,
-        foto !== undefined ? foto : null,
-        pet_id !== undefined ? pet_id : null,
-      ];
+      const values = [nome, sexo, data_nascimento, porte, raca || null, foto, pet_id];
       console.log(sql, values);
       await conn.execute(sql, values);
       console.log('Pet atualizado com sucesso!');
@@ -309,13 +312,26 @@ async function criarEvento( id_usuario, foto, nome_evento, inicio, fim, uf, id_c
       throw error;
     } 
   }
+
+  // Função para consultar a foto de um evento por ID
+async function consultarFotoEvento(eventoId) {
+  const conn = await connect();
+  const sql = "SELECT foto FROM evento WHERE id = ?";
+  try {
+    const [rows] = await conn.query(sql, [eventoId]);
+    return rows[0]?.foto || null; // Retorna o Buffer da foto ou null se não encontrado
+  } catch (error) {
+    console.error('Erro ao consultar foto:', error);
+    throw error;
+  }
+}
   
 // Função para consultar eventos com filtros
 async function consultarEventos(filtro = {}) {
   const conn = await connect();
   // Query SQL base para buscar eventos, com joins para usuário e cidade
   // COUNT conta a quantidade de inscrições para cada evento
-  let sql = "SELECT e.*, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade, TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,       TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e JOIN usuario u ON e.id_usuario = u.id  JOIN cidade c ON e.id_cidade = c.id WHERE e.fim >= NOW()"; // Filtra eventos futuros
+  let sql = "SELECT e.id, e.id_usuario, e.nome, e.inicio, e.fim, e.uf, e.id_cidade, e.bairro, e.rua, e.numero, e.descricao, e.porte, e.sexo, e.complemento, e.raca, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade, TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,     TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e     JOIN usuario u ON e.id_usuario = u.id JOIN cidade c ON e.id_cidade = c.id WHERE e.fim >= NOW() "; // Filtra eventos futuros
   const values = []; // Array para parâmetros da query
 
   // Adiciona condições dinâmicas com base nos filtros (adiciona la na query SQL)
@@ -365,19 +381,7 @@ async function consultarEventosCriados(id_usuario) {
   const conn = await connect();
   // Query SQL para buscar eventos criados pelo usuário, incluindo total_inscritos
   // COUNT conta a quantidade de inscrições para cada evento
-  const sql = `
-      SELECT 
-        e.*, 
-        u.nome_completo AS nome_usuario, 
-        c.nomeCidade AS nome_cidade,
-        TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,     
-        TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
-        (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos
-      FROM evento e
-      JOIN usuario u ON e.id_usuario = u.id
-      JOIN cidade c ON e.id_cidade = c.id
-      WHERE e.id_usuario = ?
-  `;
+  const sql = " SELECT e.id, e.id_usuario, e.nome, e.inicio, e.fim, e.uf, e.id_cidade, e.bairro, e.rua, e.numero, e.descricao, e.porte, e.sexo,  e.complemento, e.raca, u.nome_completo AS nome_usuario, c.nomeCidade AS nome_cidade, TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,      TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado, (SELECT COUNT(*) FROM inscricao i WHERE i.evento_id = e.id) AS total_inscritos FROM evento e     JOIN usuario u ON e.id_usuario = u.id JOIN cidade c ON e.id_cidade = c.id WHERE e.id_usuario = ?";
   const values = [id_usuario];
 
   try {
@@ -417,12 +421,26 @@ async function consultarEventosInscritos(usuario_id, filtro) {
   if (filtro === "em_breve") {
     sql = `
       SELECT 
-      e.*, 
-      u.nome_completo AS nome_usuario,
-      c.nomeCidade AS nome_cidade,
-      TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,       
-      TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
-      (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
+        e.id, 
+        e.id_usuario, 
+        e.nome, 
+        e.inicio, 
+        e.fim, 
+        e.uf, 
+        e.id_cidade, 
+        e.bairro, 
+        e.rua, 
+        e.numero, 
+        e.descricao, 
+        e.porte, 
+        e.sexo, 
+        e.complemento, 
+        e.raca,
+        u.nome_completo AS nome_usuario,
+        c.nomeCidade AS nome_cidade,
+        TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,       
+        TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
+        (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
       FROM evento e
       JOIN usuario u ON e.id_usuario = u.id
       JOIN inscricao i ON i.evento_id = e.id
@@ -431,16 +449,29 @@ async function consultarEventosInscritos(usuario_id, filtro) {
       AND e.fim >= NOW()
       ORDER BY e.inicio ASC
     `;
-  // Query SQL para eventos passados
   } else if (filtro === "ja_aconteceu") {
     sql = `
       SELECT 
-      e.*, 
-      u.nome_completo AS nome_usuario,
-      c.nomeCidade AS nome_cidade,
-      TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,       
-      TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
-      (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
+        e.id, 
+        e.id_usuario, 
+        e.nome, 
+        e.inicio, 
+        e.fim, 
+        e.uf, 
+        e.id_cidade, 
+        e.bairro, 
+        e.rua, 
+        e.numero, 
+        e.descricao, 
+        e.porte, 
+        e.sexo, 
+        e.complemento, 
+        e.raca,
+        u.nome_completo AS nome_usuario,
+        c.nomeCidade AS nome_cidade,
+        TIME_FORMAT(e.inicio, '%H:%i') AS inicio_formatado,       
+        TIME_FORMAT(e.fim, '%H:%i') AS fim_formatado,
+        (SELECT COUNT(*) FROM inscricao i2 WHERE i2.evento_id = e.id) AS total_inscritos
       FROM evento e
       JOIN usuario u ON e.id_usuario = u.id
       JOIN inscricao i ON i.evento_id = e.id
@@ -484,36 +515,27 @@ async function removerInscricao(usuario_id, evento_id) {
 // Função para alterar dados de um evento
 async function alterarEvento( evento_id, id_usuario, foto, nome_evento, inicio,  fim, uf, id_cidade, bairro, rua, numero, descricao, porte = "Geral", sexo = "Geral",   complemento = null, raca = null ) { // Alguns parâmetros têm valores padrão
   const conn = await connect();
-  let sql = `
-    UPDATE evento 
-    SET nome = ?, inicio = ?, fim = ?, uf = ?, id_cidade = ?, 
-        bairro = ?, rua = ?, numero = ?, descricao = ?, porte = ?, 
-        sexo = ?, complemento = ?, raca = ?
-  `;
-  const values = [ nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca,  ];
-
-  // Adiciona foto à query se fornecida
-  if (foto) {
-    sql += ", foto = ?";
-    values.push(foto);
-  }
-
-  // Adiciona condições de ID do evento e usuário
-  sql += " WHERE id = ? AND id_usuario = ?";
-  values.push(evento_id, id_usuario);
-
   try {
-    const [result] = await conn.query(sql, values);
-    // Verifica se a atualização foi bem-sucedida
+    // Query SQL para atualizar evento, mantendo foto atual se não fornecida
+    const sql = `
+      UPDATE evento 
+      SET foto = COALESCE(?, foto), nome = ?, inicio = ?, fim = ?, uf = ?, id_cidade = ?, 
+          bairro = ?, rua = ?, numero = ?, descricao = ?, porte = ?, 
+          sexo = ?, complemento = ?, raca = ?
+      WHERE id = ? AND id_usuario = ?
+    `;
+    const values = [ foto, nome_evento, inicio, fim, uf, id_cidade, bairro, rua, numero, descricao, porte, sexo, complemento, raca, evento_id, id_usuario];
+    const [result] = await conn.execute(sql, values);
     if (result.affectedRows > 0) {
-      console.log("Evento atualizado!");
+      console.log("Evento atualizado com sucesso!");
       return true;
     }
+    console.log("Nenhum evento atualizado: evento não encontrado ou usuário sem permissão");
     return false;
   } catch (error) {
     console.error("Erro ao alterar evento:", error);
     throw error;
-  }
+  } 
 }
 
 // Função para excluir um evento
@@ -682,7 +704,7 @@ async function buscarAdminPorEmail(email) {
 async function consultaUsuarios(filtroDenunciados = false) {
   const conn = await connect();
   try {
-    console.log('Executando consulta de usuários...');
+    //console.log('Executando consulta de usuários...');
     let query = `
       SELECT u.id, u.nome_completo
       FROM usuario u
@@ -696,7 +718,7 @@ async function consultaUsuarios(filtroDenunciados = false) {
     query += ' ORDER BY u.nome_completo ASC';
 
     const [rows] = await conn.query(query);
-    console.log('Usuários encontrados:', rows);
+   //console.log('Usuários encontrados:', rows);
     return rows;
   } catch (error) {
     console.error('Erro ao buscar usuários:', error);
@@ -1129,17 +1151,17 @@ async function ignorarDenunciasEvento(eventoId) {
   try {
     // Obter denúncias pendentes
     const [denuncias] = await conn.query(`
-      SELECT id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia
+      SELECT id, tipo, evento_id, usuario_denunciador_id, motivo, data_denuncia
       FROM denuncias
-      WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND status = 'PENDENTE'
-    `, [usuarioId]);
+      WHERE tipo = 'EVENTO' AND evento_id = ? AND status = 'PENDENTE'
+    `, [eventoId]);
 
     if (denuncias.length === 0) {
       console.log(`Nenhuma denúncia pendente encontrada para usuário ID ${usuarioId}`);
       return 0; // Nenhuma denúncia para ignorar
     }
 
-    console.log(`Ignorando denúncias para evento ID ${eventoId}...`);
+   // console.log(`Ignorando denúncias para evento ID ${eventoId}...`);
     const [result] = await conn.query(`
       UPDATE denuncias
       SET status = 'IGNORADO'
@@ -1147,7 +1169,7 @@ async function ignorarDenunciasEvento(eventoId) {
         AND evento_id = ?
         AND status = 'PENDENTE'
     `, [eventoId]);
-    console.log('Denúncias ignoradas:', result.affectedRows);
+    //console.log('Denúncias ignoradas:', result.affectedRows);
 
     // Registrar na auditoria
     for (const denuncia of denuncias) {
@@ -1164,6 +1186,47 @@ async function ignorarDenunciasEvento(eventoId) {
   } 
 }
 
+// Função para resolver denúncias de um usuário específico, só tem de usuário pois o evento ou ignora ou exclui, já o usuário tem outras resoluções
+async function resolverDenunciasUsuario(usuarioId) {
+  const conn = await connect();
+  try {
+    // Obter denúncias pendentes
+    const [denuncias] = await conn.query(`
+      SELECT id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia
+      FROM denuncias
+      WHERE tipo = 'USUARIO' AND usuario_denunciado_id = ? AND status = 'PENDENTE'
+    `, [usuarioId]);
+
+    if (denuncias.length === 0) {
+      console.log(`Nenhuma denúncia pendente encontrada para usuário ID ${usuarioId}`);
+      return 0; // Nenhuma denúncia para resolver
+    }
+
+    console.log(`Resolvendo denúncias para usuário ID ${usuarioId}...`);
+    const [result] = await conn.query(`
+      UPDATE denuncias
+      SET status = 'RESOLVIDO'
+      WHERE tipo = 'USUARIO'
+        AND usuario_denunciado_id = ?
+        AND status = 'PENDENTE'
+    `, [usuarioId]);
+   // console.log('Denúncias resolvidas:', result.affectedRows);
+
+    // Registrar na auditoria
+    for (const denuncia of denuncias) {
+      await conn.query(`
+        INSERT INTO auditoria_denuncias (denuncia_id, tipo, usuario_denunciado_id, usuario_denunciador_id, motivo, data_denuncia, status, acao)
+        VALUES (?, ?, ?, ?, ?, ?, 'RESOLVIDO', 'RESOLVIDA')
+      `, [denuncia.id, denuncia.tipo, denuncia.usuario_denunciado_id, denuncia.usuario_denunciador_id, denuncia.motivo, denuncia.data_denuncia]);
+    }
+
+    return result.affectedRows;
+  } catch (error) {
+    console.error('Erro ao resolver denúncias:', error);
+    throw error;
+  }
+}
+
 // Exporta todas as funções como um módulo
 module.exports = {consultaCidadeporUF,
                   consultaCidade,
@@ -1171,10 +1234,12 @@ module.exports = {consultaCidadeporUF,
                   cadastrarUsuario,        
                   alterarUsuario,
                   cadastrarPet,
+                  consultarFoto,
                   consultaPetPorId,
                   consultaPetPorDono,
                   alterarPet,
                   criarEvento,
+                  consultarFotoEvento,
                   consultarEventos,
                   consultarEventosCriados,
                   consultarEventosInscritos,
@@ -1206,5 +1271,6 @@ module.exports = {consultaCidadeporUF,
                   consultarEventosDenunciados,
                   ignorarDenunciasUsuario,
                   ignorarDenunciasEvento,
+                  resolverDenunciasUsuario,
                                 
 };

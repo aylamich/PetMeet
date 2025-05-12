@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const DenunciaModal = ({ isOpen, onClose, tipo, eventoId, usuarioDenunciadoId, usuarioDenunciadorId }) => {
   const [motivo, setMotivo] = useState("");
@@ -6,6 +7,7 @@ const DenunciaModal = ({ isOpen, onClose, tipo, eventoId, usuarioDenunciadoId, u
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   // Opções predefinidas de motivo
   const motivosPredefinidos = [
@@ -33,7 +35,7 @@ const DenunciaModal = ({ isOpen, onClose, tipo, eventoId, usuarioDenunciadoId, u
         motivo: motivoFinal || null,
       };
 
-      const response = await fetch("/api/denunciar", {
+      const response = await authFetch("/api/denunciar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

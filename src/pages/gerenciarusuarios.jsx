@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import MenuAdm from "../components/MenuAdm";
 import ProfileModal from "../components/PerfilModal";
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const GerenciarUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -12,16 +13,19 @@ const GerenciarUsuarios = () => {
   const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
   const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
   const [filtroDenunciados, setFiltroDenunciados] = useState(false);
-  const [modalDenunciasAberto, setModalDenunciasAberto] = useState(false); // Novo estado para modal de denúncias
+  const [modalDenunciasAberto, setModalDenunciasAberto] = useState(false); // Estado para modal de denúncias
   const [denuncias, setDenuncias] = useState([]); // Novo estado para denúncias
   const [usuarioDenunciadoNome, setUsuarioDenunciadoNome] = useState(""); // Nome do usuário denunciado
+  const [modalConfirmacaoResolvidoAberto, setModalConfirmacaoResolvidoAberto] = useState(false); // Modal de confirmação de resolução
+  const [usuarioParaResolver, setUsuarioParaResolver] = useState(null); // Usuário a ser resolvido
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   // Buscar todos os usuários ou usuários denunciados
   const fetchUsuarios = async (filtro = '') => {
     try {
       setLoading(true);
       const url = filtro ? `/api/consultausuarios?filtro=${filtro}` : '/api/consultausuarios';
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -43,7 +47,7 @@ const GerenciarUsuarios = () => {
   // Buscar denúncias de um usuário
   const fetchDenunciasUsuario = async (usuarioId, nomeCompleto) => {
     try {
-      const response = await fetch(`/api/consultardenunciasusuario?usuario_id=${usuarioId}`, {
+      const response = await authFetch(`/api/consultardenunciasusuario?usuario_id=${usuarioId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -64,7 +68,7 @@ const GerenciarUsuarios = () => {
 
   const ignorarDenunciasUsuario = async (usuarioId) => {
     try {
-      const response = await fetch("/api/ignorardenunciasusuario", {
+      const response = await authFetch("/api/ignorardenunciasusuario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: usuarioId }),
@@ -86,6 +90,33 @@ const GerenciarUsuarios = () => {
     }
   };
 
+  // Resolver denúncias de um usuário
+  const resolverDenunciasUsuario = async (usuarioId) => {
+    try {
+      const response = await authFetch("/api/resolverdenunciasusuario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: usuarioId }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
+      setMensagem("Denúncias resolvidas com sucesso!");
+      setModalDenunciasAberto(false);
+      setModalConfirmacaoResolvidoAberto(false);
+      setDenuncias([]);
+      setUsuarioDenunciadoNome("");
+      setUsuarioParaResolver(null);
+      fetchUsuarios(filtroDenunciados ? 'denunciados' : '');
+      setTimeout(() => setMensagem(""), 3000);
+    } catch (error) {
+      console.error("Erro ao resolver denúncias:", error);
+      setErro("Não foi possível resolver as denúncias. Tente novamente.");
+      setTimeout(() => setErro(""), 3000);
+    }
+  };
+
   // Abrir modal de perfil
   const openProfileModal = (usuario) => {
     setSelectedUsuarioId(usuario.id);
@@ -101,7 +132,7 @@ const GerenciarUsuarios = () => {
   // Confirmar exclusão do usuário
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/excluirusuario", { // http://localhost:3000/api/excluirusuario
+      const response = await authFetch("http://localhost:3000/api/excluirusuario", { // http://localhost:3000/api/excluirusuario
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: usuarioParaExcluir.id }),
@@ -128,6 +159,18 @@ const GerenciarUsuarios = () => {
   const fecharModalConfirmacao = () => {
     setModalConfirmacaoAberto(false);
     setUsuarioParaExcluir(null);
+  };
+
+  // Abrir modal de confirmação de resolução
+  const handleResolver = (usuarioId, nomeCompleto) => {
+    setUsuarioParaResolver({ id: usuarioId, nome_completo: nomeCompleto });
+    setModalConfirmacaoResolvidoAberto(true);
+  };
+
+  // Fechar modal de confirmação de resolução
+  const fecharModalConfirmacaoResolvido = () => {
+    setModalConfirmacaoResolvidoAberto(false);
+    setUsuarioParaResolver(null);
   };
 
   // Fechar modal de denúncias
@@ -329,23 +372,60 @@ const GerenciarUsuarios = () => {
               )}
               <div className="flex justify-end mt-4 gap-2">
                 {denuncias.length > 0 && (
+                  <>
+                  <button
+                    onClick={() => handleResolver(denuncias[0].usuario_denunciado_id, usuarioDenunciadoNome)}
+                    className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600"
+                    title="Marcar como resolvido"
+                  >
+                    ✅ Resolver
+                  </button>
                   <button
                     onClick={() => ignorarDenunciasUsuario(denuncias[0].usuario_denunciado_id)}
                     className="bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
                   >
                     Rejeitar Denúncia
                   </button>
+                  </>
                 )}
-        <button
-          onClick={fecharModalDenuncias}
-          className="bg-gray-200 text-black py-2 px-4 rounded-md hover:bg-gray-300"
-        >
-          Fechar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                <button
+                  onClick={fecharModalDenuncias}
+                  className="bg-gray-200 text-black py-2 px-4 rounded-md hover:bg-gray-300"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+          {modalConfirmacaoResolvidoAberto && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-xl font-bold text-black mb-4">
+                Confirmar Resolução
+              </h2>
+              <p className="text-gray-700 mb-6">
+                Tem certeza que deseja marcar as denúncias contra{" "}
+                {usuarioParaResolver?.nome_completo || "Usuário"} como resolvidas?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => resolverDenunciasUsuario(usuarioParaResolver.id)}
+                  className="flex-1 bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600"
+                >
+                  Confirmar
+                </button>
+                <button
+                  onClick={fecharModalConfirmacaoResolvido}
+                  className="flex-1 bg-gray-200 text-black py-2 px-4 rounded-md hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

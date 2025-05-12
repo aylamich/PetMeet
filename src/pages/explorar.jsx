@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Menu from "../components/Menu"; // Importando o componente Menu
 import DenunciaModal from "../components/denunciarmodal"; // Importar DenunciaModal
+import { AuthContext } from "../context/AuthContext"; // Importar AuthContext
 
 const Explorar = () => {
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
   const [eventos, setEventos] = useState([]); // Lista de eventos
   const [filtros, setFiltros] = useState({}); // Filtros aplicados
   const [modalAberto, setModalAberto] = useState(false); // Controle do modal de detalhes
@@ -21,6 +23,7 @@ const Explorar = () => {
   const [erro, setErro] = useState(""); // Mensagem de erro
   const [inscricoes, setInscricoes] = useState({}); // Controle das inscrições do usuário nos eventos
   const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para DenunciaModal
+  const [imageErrors, setImageErrors] = useState({}); // Erros de imagem
 
   const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
 
@@ -55,6 +58,11 @@ const Explorar = () => {
     { uf: "TO", nome: "Tocantins" },
   ];
 
+  const handleImageError = (eventoId, foto) => {
+    console.error("Erro ao carregar imagem:", foto);
+    setImageErrors((prev) => ({ ...prev, [eventoId]: true }));
+  };
+
   // Função para buscar cidades de acordo com o estado selecionado
   const fetchCidades = async (uf) => {
     try {
@@ -83,7 +91,7 @@ const Explorar = () => {
   const fetchEventos = async (filtro = {}) => {
     try {
       // Buscar eventos
-      const response = await fetch("/api/consultareventos", {
+      const response = await authFetch("/api/consultareventos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(filtro), // Enviando os filtros aplicados
@@ -100,7 +108,7 @@ const Explorar = () => {
       // Buscar inscrições do usuário
       if (idUsuario) {
         try {
-          const responseInscritos = await fetch("/api/eventosInscritos", {
+          const responseInscritos = await authFetch("/api/eventosInscritos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ usuario_id: idUsuario, filtro: "em_breve" }),
@@ -150,7 +158,7 @@ const Explorar = () => {
 
     try {
       // Envia a requisição para inscrever o usuário no evento
-      const response = await fetch("/api/inscrever", {
+      const response = await authFetch("/api/inscrever", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: idUsuario, evento_id }),
@@ -471,10 +479,11 @@ const Explorar = () => {
                 className="bg-white p-6 rounded-lg shadow-md"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"}
-                  alt={evento.nome}
-                  className="w-full h-40 object-cover rounded-md mb-4"
-                />
+                    src={imageErrors[evento.id] ? "https://via.placeholder.com/150" : `http://localhost:3000/api/evento/foto/${evento.id}?t=${Date.now()}`}
+                    alt={evento.nome}
+                    className="w-full h-40 object-cover rounded-md mb-4"
+                    onError={() => handleImageError(evento.id, `http://localhost:3000/api/evento/foto/${evento.id}`)}
+                  />
                 <h2 className="text-xl font-semibold text-blue-900">
                   {evento.nome}
                 </h2>
@@ -567,11 +576,12 @@ const Explorar = () => {
             </h2>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-64">
-                <img
-                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
-                  alt={eventoSelecionado.nome}
-                  className="w-full h-40 object-cover rounded-md mb-4"
-                />
+              <img
+                src={imageErrors[eventoSelecionado.id] ? "https://via.placeholder.com/150" : `http://localhost:3000/api/evento/foto/${eventoSelecionado.id}?t=${Date.now()}`}
+                alt={eventoSelecionado.nome}
+                className="w-full h-40 object-cover rounded-md mb-4"
+                onError={() => handleImageError(eventoSelecionado.id, `http://localhost:3000/api/evento/foto/${eventoSelecionado.id}`)}
+              />
                 <div className="space-y-2 text-gray-700">
                   <p className="text-sm break-words">
                     <strong>Descrição:</strong> {eventoSelecionado.descricao}

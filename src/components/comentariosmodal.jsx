@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import DenunciaModal from "../components/denunciarmodal"; // Importar DenunciaModal
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // props para carregar comentários especificos e controlar o modal
   const [comentarios, setComentarios] = useState([]); // Armazena a lista de comentários recebida da API
@@ -13,6 +14,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
   const comentariosRef = useRef(null); // Referência ao elemento <div> que contém a lista de comentários, usada para rolar automaticamente até o final quando novos comentários são carregados.
   const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para DenunciaModal
   const [usuarioDenunciadoId, setUsuarioDenunciadoId] = useState(null); // ID do usuário denunciado
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   // Logar idUsuario para depuração
   console.log("idUsuario recebido:", idUsuario);
@@ -21,7 +23,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
   const fetchComentarios = async () => {
     try {
       console.log("Enviando idEvento:", idEvento);
-      const response = await fetch("/api/consultarcomentarios", {
+      const response = await authFetch("/api/consultarcomentarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_evento: idEvento }),
@@ -64,7 +66,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
 
     try {
       // Envia o novo comentário para a API
-      const response = await fetch("/api/comentarios", {
+      const response = await authFetch("/api/comentarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -99,7 +101,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
   // Função para confirmar a exclusão do comentário
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluircomentario", {
+      const response = await authFetch("/api/excluircomentario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -148,7 +150,7 @@ const ComentariosModal = ({ idEvento, idUsuario, isOpen, onClose }) => { // prop
 
     try {
       // Envia o comentário editado para a API
-      const response = await fetch("/api/editarcomentario", {
+      const response = await authFetch("/api/editarcomentario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

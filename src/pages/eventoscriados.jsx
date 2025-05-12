@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Menu from "../components/Menu"; // Importando o componente Menu
 import ComentariosModal from "../components/comentariosmodal"; // Importando o componente ComentariosModal 
 import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscritos
+import { AuthContext } from "../context/AuthContext"; // Importar AuthContext
 
 const EventosCriados = () => {
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
   const [eventos, setEventos] = useState([]); // Lista de eventos criados
   const [modalAberto, setModalAberto] = useState(false); // Modal de detalhes do evento
   const [modalFormAberto, setModalFormAberto] = useState(false); // Modal de criação/edição de evento
@@ -81,7 +83,7 @@ const EventosCriados = () => {
       return;
     }
     try {
-      const response = await fetch("/api/consultareventoscriados", { // API para buscar eventos criados
+      const response = await authFetch("/api/consultareventoscriados", { // API para buscar eventos criados
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_usuario: idUsuario }), // Enviando ID do usuário
@@ -198,14 +200,15 @@ const EventosCriados = () => {
     }
 
     try {
-      // Cria um objeto FormData para enviar os dados do formulário e a imagem
       const formDataToSend = new FormData();
       formDataToSend.append("id_usuario", idUsuario);
+      if (!isEdicao && !foto) {
+        setErro("A foto é obrigatória para criar um evento.");
+        return;
+      }
       if (foto) {
-        formDataToSend.append("fotoPet", foto);
+        formDataToSend.append("fotoPet", foto); // Ajustado para corresponder ao multer
         console.log("Enviando nova foto:", foto.name);
-      } else if (!isEdicao) {  // Se não for edição e não houver foto, adiciona uma string vazia
-        formDataToSend.append("fotoPet", "");
       }
       formDataToSend.append("nome_evento", formData.nome);
       formDataToSend.append("inicio", `${formData.data_inicio}T${formData.hora_inicio}`);
@@ -224,7 +227,7 @@ const EventosCriados = () => {
 
       // Envia os dados para a API de criação ou edição de evento com uma condicional de se está editando ou criando um novo evento
       const url = isEdicao ? "/api/alterarevento" : "/api/criarevento";
-      const response = await fetch(url, { // Aqui completa com o endpoint correto
+      const response = await authFetch(url, { // Aqui completa com o endpoint correto
         method: "POST",
         body: formDataToSend,
       });
@@ -255,7 +258,7 @@ const EventosCriados = () => {
   // Função para confirmar a exclusão do evento
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluirevento", {
+      const response = await authFetch("/api/excluirevento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ evento_id: eventoParaExcluir.id, id_usuario: idUsuario }), // Enviando ID do evento e do usuário
@@ -330,8 +333,7 @@ const EventosCriados = () => {
       porte: eventoSelecionado.porte,
       sexo: eventoSelecionado.sexo,
     });
-    console.log("Foto ao editar:", eventoSelecionado.foto);
-    setFotoPreview(eventoSelecionado.foto || "");
+    setFotoPreview(`/api/evento/foto/${eventoSelecionado.id}?t=${Date.now()}`);
     setFoto(null);
     fetchCidades(eventoSelecionado.uf);
     setIsEdicao(true); // Define que está em modo de edição
@@ -440,10 +442,10 @@ const EventosCriados = () => {
                 className="bg-white p-6 rounded-lg shadow-md"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"} 
+                  src={imageErrors[evento.id] ? "https://via.placeholder.com/150" : `/api/evento/foto/${evento.id}?t=${Date.now()}`}
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
-                  onError={() => handleImageError(evento.id, evento.foto)}
+                  onError={() => handleImageError(evento.id, `/api/evento/foto/${evento.id}`)}
                 />
                 <h2 className="text-xl font-semibold text-blue-900">
                   {evento.nome}
@@ -530,12 +532,12 @@ const EventosCriados = () => {
             </h2>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-64">
-                <img
-                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
-                  alt={eventoSelecionado.nome}
-                  className="w-full h-40 object-cover rounded-md mb-4"
-                  onError={() => handleImageError(eventoSelecionado.id, eventoSelecionado.foto)}
-                />
+              <img
+                src={imageErrors[eventoSelecionado.id] ? "https://via.placeholder.com/150" : `/api/evento/foto/${eventoSelecionado.id}?t=${Date.now()}`}
+                alt={eventoSelecionado.nome}
+                className="w-full h-40 object-cover rounded-md mb-4"
+                onError={() => handleImageError(eventoSelecionado.id, `/api/evento/foto/${eventoSelecionado.id}`)}
+              />
                 <div className="space-y-2 text-gray-700">
                   <p className="text-sm break-words">
                     <strong>Descrição:</strong> {eventoSelecionado.descricao}

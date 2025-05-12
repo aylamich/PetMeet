@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'selecao' }) {
   const [modoSelecao, setModoSelecao] = useState(modoInicial === 'selecao'); // Modo de seleção ou cadastro
@@ -6,6 +7,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
   const [modoCadastro, setModoCadastro] = useState(modoInicial === 'cadastro');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Estado para controle do modal de confirmação de exclusão
   const [petToDelete, setPetToDelete] = useState(null); // Pet a ser excluído
+  const [localPets, setLocalPets] = useState(pets); // Estado local para gerenciar pets
 
   const [nome, setNome] = useState('');
   const [sexo, setSexo] = useState('');
@@ -17,9 +19,17 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
   const [fotoPreview, setFotoPreview] = useState('');
   const [carregando, setCarregando] = useState(false); // Estado para controle do carregamento
 
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
+  
+
   const fileInputRef = useRef(null); // Referência para o input de arquivo, usada para limpar o campo
 
   const BASE_URL = 'http://localhost:3000'; // URL base para carregar imagens
+
+  // Sincroniza localPets com a prop pets
+  useEffect(() => {
+    setLocalPets(pets);
+  }, [pets]);
   
   useEffect(() => {
     // Executa toda vez que o modal é aberto ou modoInicial muda
@@ -67,14 +77,8 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       setDataNascimento(petSelecionado.data_nascimento || '');
       setPorte(petSelecionado.porte || '');
       setRaca(petSelecionado.raca || '');
-
-      if (petSelecionado.foto) {
-        setFotoAtual(petSelecionado.foto);
-        setFotoPreview(`${BASE_URL}${petSelecionado.foto}`);
-      } else {
-        setFotoAtual('');
-        setFotoPreview('');
-      }
+      setFoto(null);
+      setFotoPreview(`${BASE_URL}/api/pet/foto/${petSelecionado.id}`); // Carrega a foto via API
     } else if (modoCadastro) {
       // Limpa o formulário no modo de cadastro
       setNome('');
@@ -92,6 +96,16 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
   const handleFotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validar tipo e tamanho do arquivo
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Apenas imagens JPEG, PNG ou GIF são permitidas.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 10 MB.');
+        return;
+      }
       setFoto(file); // Armazena o arquivo
       setFotoPreview(URL.createObjectURL(file)); // Cria URL para o preview
     }
@@ -132,7 +146,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
     setCarregando(true);
     try {
       console.log('Tentando excluir pet com ID:', petToDelete.id); // Log para depuração
-      const response = await fetch(`/api/deletarpet?pet_id=${petToDelete.id}`, { // Manda pro backend o ID do pet a ser excluído e deleta
+      const response = await authFetch(`/api/deletarpet?pet_id=${petToDelete.id}`, { // Manda pro backend o ID do pet a ser excluído e deleta
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -143,11 +157,13 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         throw new Error(errorData.error || 'Erro ao excluir pet');
       }
   
-      // Se a exclusão for bem-sucedida, notifica o componente pai
-      onDelete(petToDelete.id); 
-      setShowDeleteConfirm(false); // Fecha o modal de confirmação
+      // Remove o pet de localPets
+      setLocalPets((prev) => prev.filter((p) => p.id !== petToDelete.id));
+      // Notifica o componente pai
+      onDelete(petToDelete.id);
+      setShowDeleteConfirm(false);
       setPetToDelete(null);
-      setModoSelecao(true); // Volta para seleção após exclusão
+      setModoSelecao(true);
     } catch (error) {
       console.error('Erro ao excluir pet:', error);
       alert(`Erro ao excluir pet: ${error.message}`);
@@ -174,6 +190,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       }
 
       let url = '';
+      //let method = 'POST';
       let updatedPet = {};
 
       if (modoCadastro) {
@@ -187,7 +204,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
         url = '/api/alterarpet';
       }
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: 'POST',
         body: formData,
       });
@@ -209,11 +226,12 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
             data_nascimento: dataNascimento,
             porte,
             raca: raca || null,
-            foto: data.foto || null, // Mantém o caminho relativo ("/uploads/")
+            foto: foto ? `/api/pet/foto/${data.petId || data.pet.id}` : null, // Usa a rota da foto
           };
+          setLocalPets((prev) => [...prev, updatedPet]); // Adiciona o novo pet
           console.log('updatedPet após cadastro:', updatedPet); // Verifica se o id está presente
           setFotoPreview(data.foto ? `${BASE_URL}${data.foto}` : ''); // Preview com BASE_URL para o modal
-          setFotoAtual(''); // Limpa fotoAtual após cadastrar
+          //setFotoAtual(''); // Limpa fotoAtual após cadastrar
           setFoto(null); // Limpa o estado da foto
           if (fileInputRef.current) {
             fileInputRef.current.value = ''; // Limpa o valor do input
@@ -226,8 +244,11 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
             data_nascimento: dataNascimento,
             porte,
             raca: raca || null,
-            foto: data.pet.foto || fotoAtual, // Mantém o caminho relativo
+            foto: foto ? `/api/pet/foto/${petSelecionado.id}` : petSelecionado.foto, // Mantém ou atualiza a foto
           };
+          setLocalPets((prev) =>
+            prev.map((p) => (p.id === updatedPet.id ? updatedPet : p))
+          ); // Atualiza o pet existente
           setModoSelecao(true); // Volta para seleção no modo de edição
         }
 
@@ -282,9 +303,9 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
       {modoSelecao ? ( // Se estiver no modo de seleção, exibe a lista de pets
             <div className="space-y-4">
               <h4 className="text-lg font-medium text-gray-800">Selecione o pet que deseja editar:</h4>
-              {pets && pets.length > 0 ? (
+              {localPets && localPets.length > 0 ? (
                 <div className="space-y-3">
-                  {pets.map(pet => (
+                 {localPets.map(pet => (
                     <div
                       key={pet.id} // Usa o ID do pet como chave
                       className="p-4 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-between"
@@ -295,18 +316,15 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                       >
                         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-200 bg-gray-100 flex items-center justify-center">
                           {/* Exibe a foto do pet ou um ícone padrão se não houver foto */}
-                          {pet.foto ? (
-                            <img
-                              src={`${BASE_URL}${pet.foto}`}
-                              alt={pet.nome}
-                              className="w-full h-full object-cover"
-                              onError={(e) => console.log(`Erro ao carregar imagem de ${pet.nome}: ${e.target.src}`)}
-                            />
-                          ) : (
-                            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6-1.8C18 6.57 15.35 4 12 4s-6 2.57-6 6.2c0 2.34 1.95 5.44 6 9.14 4.05-3.7 6-6.8 6-9.14zM12 2c4.2 0 8 3.22 8 8.2 0 3.32-2.67 7.25-8 11.8-5.33-4.55-8-8.48-8-11.8C4 5.22 7.8 2 12 2z" />
-                            </svg>
-                          )}
+                          <img
+                            src={`${BASE_URL}/api/pet/foto/${pet.id}?t=${Date.now()}`} //O ?t=${Date.now()} força o navegador a buscar a imagem atualizada
+                            alt={pet.nome}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.log(`Erro ao carregar imagem de ${pet.nome}: ${e.target.src}`);
+                              e.target.src = '/placeholder.jpg'; // Imagem padrão
+                            }}
+                          />
                         </div>
                         <div>
                           <h5 className="font-medium">{pet.nome}</h5> {/* Nome do pet */}
@@ -375,7 +393,7 @@ function EditarPetModal({ pets, onClose, onSave, onDelete, modoInicial = 'seleca
                       alt="Preview da foto do pet"
                       className="w-full h-full object-cover"
                       onError={(e) => console.log(`Erro ao carregar preview: ${e.target.src}`)}
-                      required
+                      //required
                     />
                   </div>
                 )}

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Menu from "../components/Menu"; // Importando o componente Menu
 import ComentariosModal from "../components/comentariosmodal"; // Importando o componente ComentariosModal
 import ModalInscritos from "../components/modalinscritos"; // Importando o componente ModalInscrito
 import DenunciaModal from "../components/denunciarmodal"; // Importar o componente DenunciaModals
+import { AuthContext } from "../context/AuthContext"; // Importar AuthContext
 
 const EventosInscritos = () => {
   const [filtro, setFiltro] = useState("em_breve"); // Estado para o filtro de eventos, inicia no modo "em_breve"
@@ -17,8 +18,16 @@ const EventosInscritos = () => {
   const [mensagem, setMensagem] = useState(""); // Mensagem de sucesso
   const [cidades, setCidades] = useState([]);
   const [mostrarDenunciaModal, setMostrarDenunciaModal] = useState(false); // Estado para o modal de denúncia
+  const [imageErrors, setImageErrors] = useState({}); // Erros de imagem
 
   const idUsuario = localStorage.getItem("usuario_id"); // ID do usuário logado
+
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
+
+  const handleImageError = (eventoId, foto) => {
+    console.error("Erro ao carregar imagem:", foto);
+    setImageErrors((prev) => ({ ...prev, [eventoId]: true }));
+  };
 
   // Função para buscar eventos inscritos do usuário
   const fetchEventosInscritos = async () => {
@@ -29,7 +38,7 @@ const EventosInscritos = () => {
     }
 
     try {
-      const response = await fetch("/api/eventosInscritos", {
+      const response = await authFetch("/api/eventosInscritos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: idUsuario, filtro }), // Envia o ID do usuário e o filtro selecionado
@@ -57,7 +66,7 @@ const EventosInscritos = () => {
     }
 
     try {
-      const response = await fetch("/api/desinscrever", {
+      const response = await authFetch("/api/desinscrever", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: idUsuario, evento_id }),
@@ -228,9 +237,10 @@ const EventosInscritos = () => {
                 className="bg-white p-6 rounded-lg shadow-md relative"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"} // Imagem padrão caso não tenha foto
+                  src={imageErrors[evento.id] ? "https://via.placeholder.com/150" : `http://localhost:3000/api/evento/foto/${evento.id}?t=${Date.now()}`}
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
+                  onError={() => handleImageError(evento.id, `http://localhost:3000/api/evento/foto/${evento.id}`)}
                 />
                 <h2 className="text-xl font-semibold text-blue-900">
                   {evento.nome}
@@ -336,10 +346,11 @@ const EventosInscritos = () => {
             </h2>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-64">
-                <img
-                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
+              <img
+                  src={imageErrors[eventoSelecionado.id] ? "https://via.placeholder.com/150" : `http://localhost:3000/api/evento/foto/${eventoSelecionado.id}?t=${Date.now()}`}
                   alt={eventoSelecionado.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
+                  onError={() => handleImageError(eventoSelecionado.id, `http://localhost:3000/api/evento/foto/${eventoSelecionado.id}`)}
                 />
                 <div className="space-y-2 text-gray-700">
                   <p className="text-sm break-words">

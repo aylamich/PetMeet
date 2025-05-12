@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import MenuAdm from "../components/MenuAdm";
 import ModalInscritos from "../components/modalinscritosadm";
 import ComentariosAdmModal from "../components/comentariosadmmodal";
+import { AuthContext } from '../context/AuthContext'; // Para o logout
 
 const GerenciarEventos = () => {
   const [eventos, setEventos] = useState([]);
@@ -28,6 +29,9 @@ const GerenciarEventos = () => {
   const [modalDenunciasAberto, setModalDenunciasAberto] = useState(false);
   const [denuncias, setDenuncias] = useState([]);
   const [eventoDenunciadoNome, setEventoDenunciadoNome] = useState("");
+
+  const [imageErrors, setImageErrors] = useState({});
+  const { authFetch } = useContext(AuthContext); // Obter authFetch do AuthContext
 
   const estados = [
     { uf: "AC", nome: "Acre" },
@@ -58,6 +62,11 @@ const GerenciarEventos = () => {
     { uf: "SE", nome: "Sergipe" },
     { uf: "TO", nome: "Tocantins" },
   ];
+
+  const handleImageError = (eventoId, foto) => {
+    console.error("Erro ao carregar imagem:", foto);
+    setImageErrors((prev) => ({ ...prev, [eventoId]: true }));
+  };
 
   const fetchCidades = async (uf) => {
     try {
@@ -92,7 +101,7 @@ const GerenciarEventos = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(filtro),
           };
-      const response = await fetch(url, options);
+      const response = await authFetch(url, options);
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Erro ${response.status}: ${errorText}`);
@@ -109,7 +118,7 @@ const GerenciarEventos = () => {
 
   const fetchDenunciasEvento = async (eventoId, nomeEvento) => {
     try {
-      const response = await fetch(`/api/consultardenunciasevento?evento_id=${eventoId}`, {
+      const response = await authFetch(`/api/consultardenunciasevento?evento_id=${eventoId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -138,7 +147,7 @@ const GerenciarEventos = () => {
     }
     try {
       console.log('Enviando requisição para ignorar denúncias com eventoId:', eventoId);
-      const response = await fetch("/api/ignorardenunciasevento", {
+      const response = await authFetch("/api/ignorardenunciasevento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ evento_id: eventoId }),
@@ -276,7 +285,7 @@ const GerenciarEventos = () => {
 
   const confirmarExclusao = async () => {
     try {
-      const response = await fetch("/api/excluireventoadm", {
+      const response = await authFetch("/api/excluireventoadm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ evento_id: eventoParaExcluir.id }),
@@ -512,9 +521,10 @@ const GerenciarEventos = () => {
                 className="bg-white p-6 rounded-lg shadow-md"
               >
                 <img
-                  src={evento.foto || "https://via.placeholder.com/150"}
+                  src={imageErrors[evento.id] ? "/placeholder.jpg" : `/api/evento/foto/${evento.id}?t=${Date.now()}`}
                   alt={evento.nome}
                   className="w-full h-40 object-cover rounded-md mb-4"
+                  onError={() => handleImageError(evento.id, `/api/evento/foto/${evento.id}`)}
                 />
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-black">
@@ -640,11 +650,12 @@ const GerenciarEventos = () => {
             </h2>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-64">
-                <img
-                  src={eventoSelecionado.foto || "https://via.placeholder.com/150"}
-                  alt={eventoSelecionado.nome}
-                  className="w-full h-40 object-cover rounded-md mb-4"
-                />
+              <img
+                src={imageErrors[eventoSelecionado.id] ? "/placeholder.jpg" : `/api/evento/foto/${eventoSelecionado.id}?t=${Date.now()}`}
+                alt={eventoSelecionado.nome}
+                className="w-full h-40 object-cover rounded-md mb-4"
+                onError={() => handleImageError(eventoSelecionado.id, `/api/evento/foto/${eventoSelecionado.id}`)}
+              />
                 <div className="space-y-2 text-gray-700">
                   <p className="text-sm break-words">
                     <strong>Descrição:</strong> {eventoSelecionado.descricao}
