@@ -12,6 +12,7 @@ function Cadastro() {
   const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para mostrar/esconder a senha
   const [erroGeral, setErroGeral] = useState(''); // Estado para erros gerais 
   const [nomeErro, setNomeErro] = useState('');
+  const [nomeCompleto, setNomeCompleto] = useState('');
 
   // Estados para os requisitos da senha
   const [temMinimoCaracteres, setTemMinimoCaracteres] = useState(false); // Todos inicializam falsos
@@ -20,10 +21,10 @@ function Cadastro() {
   const [temCaractereEspecial, setTemCaractereEspecial] = useState(false);
 
   const handleNomeCompletoChange = (event) => {
-    event.target.value = event.target.value.replace(/\d/g, ''); // Não deixa digitar números substituindo por string vazia
-    event.target.value = valor;
-    validarNomeCompleto(valor); // Valida o nome em tempo real
-  };
+  const novoValor = event.target.value.replace(/\d/g, ''); // Remove números
+  setNomeCompleto(novoValor); // Atualiza o estado
+  validarNomeCompleto(novoValor); // Valida o nome em tempo real
+ };
 
   const handleSenhaFocus = () => {
     // Quando o usuário clica no campo de senha
@@ -273,6 +274,7 @@ function Cadastro() {
                 Nome Completo<span className="text-red-500">*</span>
               </label>
               <input type="text" id="nomeCompleto" name="nome_completo" placeholder="Digite seu nome completo" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-200" 
+                value={nomeCompleto} // Campo controlado
                 onChange={handleNomeCompletoChange} // Chama a função para não deixar digitar números
                 onBlur={(e) => validarNomeCompleto(e.target.value)}
                 required
