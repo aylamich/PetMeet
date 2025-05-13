@@ -18,7 +18,8 @@ console.log('db importado com sucesso:', db ? 'Sim' : 'Não');
 app.use(cors({
   origin: 'http://localhost:5173', // URL do frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
-  allowedHeaders: ['Content-Type'], // Permite o cabeçalho necessário para multipart/form-data
+  allowedHeaders: ['Content-Type', 'Authorization'],  // Permite o cabeçalho necessário para multipart/form-data
+
 }));
 
 
@@ -115,7 +116,7 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
           { id: usuario.id, tipo: 'usuario' },
           process.env.JWT_SECRET,
-          { expiresIn: '1h' }
+          { expiresIn: '30s' }
         );
         console.log('Login bem-sucedido (usuário):', email);
         return res.json({ usuario_id: usuario.id, nome: usuario.nome_completo, tipo: 'usuario', token });

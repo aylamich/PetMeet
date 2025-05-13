@@ -217,10 +217,17 @@ function CadastroPet() {
                   <img src={fotoPreview} alt="Preview do pet" className="w-full h-full object-cover" />
                 </div>
               )}
-              <input type="file" id="fotoPet" name="fotoPet" accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
+              <input type="file" id="fotoPet" name="fotoPet" accept="image/*"  className="hidden mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100"
                 onChange={handleFotoChange}
                 required/>
-            </div>
+              {/* Botão personalizado */}
+              <label
+                htmlFor="fotoPet"
+                className="mt-1 inline-block px-4 py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-md cursor-pointer hover:bg-red-100"
+              >
+                Escolher arquivo
+              </label>
+            </div>  
 
             {/* Campo de Nome */}
             <div className="mb-4">
